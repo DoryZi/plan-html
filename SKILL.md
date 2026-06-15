@@ -3,6 +3,16 @@ name: plan-html
 description: Interactive decision-deck planning. Same research/design thinking as /plan, but the plan is an interactive HTML deck the user works through in the browser — intent cards and decision cards, answered with buttons OR free text, with per-card questions to the agent — iterated in rounds until finalized. Every answer autosaves, so interruptions lose nothing. Use whenever the user wants to plan, review, or iterate on a plan interactively instead of reading markdown in the terminal.
 ---
 
+<!-- experiment-banner:start -->
+> 🧪 **This is an experiment** — part of [**AI Will Replace You**](https://doryzidon.com).
+>
+> **Stop wasting time on AI. I run practical experiments — real lessons you can use tomorrow, biweekly.**
+>
+> **[Subscribe to AI Will Replace Your Engineers →](https://doryzidon.com)**
+>
+> ▶ Full walkthrough on YouTube — _coming soon_ · [@aiwillreplaceyou](https://youtube.com/@aiwillreplaceyou)
+<!-- experiment-banner:end -->
+
 # Plan (HTML / interactive, round-based)
 
 Same goal as `/plan` — research a codebase and design an implementation plan

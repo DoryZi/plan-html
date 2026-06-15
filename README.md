@@ -1,3 +1,13 @@
+<!-- experiment-banner:start -->
+> 🧪 **This is an experiment** — part of [**AI Will Replace You**](https://doryzidon.com).
+>
+> **Stop wasting time on AI. I run practical experiments — real lessons you can use tomorrow, biweekly.**
+>
+> **[Subscribe to AI Will Replace Your Engineers →](https://doryzidon.com)**
+>
+> ▶ Full walkthrough on YouTube — _coming soon_ · [@aiwillreplaceyou](https://youtube.com/@aiwillreplaceyou)
+<!-- experiment-banner:end -->
+
 # plan-html
 
 **Interactive decision-deck planning.** Turn a `plan.json` into a live HTML deck
