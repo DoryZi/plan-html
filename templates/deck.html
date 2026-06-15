@@ -685,357 +685,361 @@
 <script>
   let PLAN = {{PLAN_JSON}};
   const SAVED = {{SAVED_ANSWERS}};
-  let ROUND = PLAN.round || 1;
-  const LS_KEY = "plan-html:" + (PLAN.slug || PLAN.title || "plan");
-
-  // ---------- theme: follow the OS by default, remember the user's pick ----------
-  const THEME_KEY = "plan-html-theme";
-  const applyTheme = t => {
-    document.documentElement.dataset.theme = t;
-    const btn = document.getElementById("themeBtn");
-    if (btn) { btn.textContent = t === "light" ? "🌙" : "☀️"; }
-  };
-  let savedTheme = null;
-  try { savedTheme = localStorage.getItem(THEME_KEY); }
-  catch (e) { console.warn("theme restore failed", e); }
-  // default by time of day: light 07:00-19:00, dark at night; your pick wins once made
-  const hour = new Date().getHours();
-  applyTheme(savedTheme || (hour >= 7 && hour < 19 ? "light" : "dark"));
-  document.getElementById("themeBtn").addEventListener("click", () => {
-    const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
-    applyTheme(next);
-    try { localStorage.setItem(THEME_KEY, next); }
-    catch (e) { console.warn("theme save failed", e); }
-  });
-
-  // ---------- tiny markdown renderer (escape first; offline, no CDN) ----------
-  const escapeHtml = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-  const md = (src) => {
+  window.PLAN = PLAN; window.SAVED = SAVED;
+(() => {
+  // src/md.js
+  var NUL = String.fromCharCode(0);
+  var escapeHtml = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  var md = (src) => {
     if (src == null) return "";
     let s = escapeHtml(src);
     const stash = [];
     s = s.replace(/```\w*\n?([\s\S]*?)```/g, (_, c) => {
-      stash.push(`<pre class="code">${c.replace(/\n$/,"")}</pre>`);
-      return `\u0000${stash.length - 1}\u0000`;
+      stash.push(`<pre class="code">${c.replace(/\n$/, "")}</pre>`);
+      return `${NUL}${stash.length - 1}${NUL}`;
     });
     s = s.replace(/`([^`\n]+)`/g, "<code>$1</code>");
     s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
     s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
-    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    s = s.replace(
+      /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener">$1</a>'
+    );
     s = s.replace(/(^|\n)((?:[-*] .*(?:\n|$))+)/g, (_, pre, block) => {
-      const items = block.trim().split(/\n/)
-        .map(l => `<li>${l.replace(/^[-*] /, "")}</li>`).join("");
+      const items = block.trim().split(/\n/).map((l) => `<li>${l.replace(/^[-*] /, "")}</li>`).join("");
       return `${pre}<ul>${items}</ul>`;
     });
-    s = s.split(/\n{2,}/).map(p =>
-      /^(<ul|<pre|\u0000)/.test(p.trim()) ? p : `<p>${p.replace(/\n/g, "<br>")}</p>`
+    s = s.split(/\n{2,}/).map(
+      (p) => new RegExp("^(<ul|<pre|" + NUL + ")").test(p.trim()) ? p : `<p>${p.replace(/\n/g, "<br>")}</p>`
     ).join("");
-    s = s.replace(/\u0000(\d+)\u0000/g, (_, i) => stash[+i]);
+    s = s.replace(new RegExp(NUL + "(\\d+)" + NUL, "g"), (_, i) => stash[+i]);
     return s;
   };
 
-  const el = (tag, cls, txt) => { const e = document.createElement(tag);
-    if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
-  const mdEl = (cls, src) => { const e = el("div", "md" + (cls ? " " + cls : ""));
-    e.innerHTML = md(src); return e; };
+  // src/dom.js
+  var el = (tag, cls, txt) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (txt != null) e.textContent = txt;
+    return e;
+  };
+  var mdEl = (cls, src) => {
+    const e = el("div", "md" + (cls ? " " + cls : ""));
+    e.innerHTML = md(src);
+    return e;
+  };
+  var createLightbox = () => {
+    const lightbox = document.getElementById("lightbox");
+    const openLightbox2 = (title, fill) => {
+      document.getElementById("lbTitle").textContent = title || "";
+      const c = document.getElementById("lbContent");
+      c.innerHTML = "";
+      fill(c);
+      lightbox.classList.add("show");
+    };
+    lightbox.addEventListener("click", (e) => {
+      if (e.target === lightbox) lightbox.classList.remove("show");
+    });
+    document.getElementById("lbClose").addEventListener(
+      "click",
+      () => lightbox.classList.remove("show")
+    );
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") lightbox.classList.remove("show");
+    });
+    const zoomableDiagram2 = (container, title) => {
+      container.title = "Click to enlarge";
+      container.addEventListener("click", () => openLightbox2(title, (c) => {
+        c.innerHTML = container.innerHTML;
+      }));
+    };
+    return { openLightbox: openLightbox2, zoomableDiagram: zoomableDiagram2 };
+  };
 
-  const chipClass = s => s === "needs-you" ? "you" : s === "agent-call" ? "agent" : "fyi";
-  const chipText  = s => s === "needs-you" ? "needs you" : s === "agent-call" ? "agent's call" : "FYI";
-
-  // ---------- answer state (restored from autosave) ----------
-  // answers[id] = { choice, answer, question, edit }
-  let answers = {};
-  // cards the user authored in the browser, by section. Each is a normal card
-  // object (intent/boundary/decision/step) plus userAdded:true, and is merged
-  // into its section at render time. Autosaved alongside answers.
-  let added = { intents: [], boundaries: [], decisions: [], steps: [] };
-  // editable working copy of the final-verify ("finish line") rows. null until
-  // first rendered/edited; once the user touches it, it's the source of truth
-  // for that section and rides back with the round. Persisted.
-  let fvState = null;
-  // global requests to the agent for the next round
-  let agentActions = { reexplore: false, note: "" };
-  const restore = () => {
-    let src = SAVED;
+  // src/state.js
+  var EMPTY_ADDED = () => ({ intents: [], boundaries: [], decisions: [], steps: [] });
+  var isDismissed = (store2, id) => Boolean((store2.answers[id] || {}).dismissed);
+  var findCard = (store2, id) => (store2.plan.boundaries || []).find((d) => d.id === id) || (store2.plan.intents || []).find((d) => d.id === id) || (store2.plan.decisions || []).find((d) => d.id === id) || store2.added.boundaries.find((d) => d.id === id) || store2.added.intents.find((d) => d.id === id) || store2.added.decisions.find((d) => d.id === id) || store2.added.steps.find((d) => d.id === id);
+  var isSatisfied = (store2, id) => {
+    if (isDismissed(store2, id)) return true;
+    const card = findCard(store2, id);
+    if (card && card.userAdded && (card.title || "").trim()) return true;
+    const a = store2.answers[id] || {};
+    return Boolean(a.choice || a.answer && a.answer.trim() || a.edit && a.edit.trim());
+  };
+  var hasQuestion = (store2, id) => {
+    if (isDismissed(store2, id)) return false;
+    if (store2.pendingAsk[id] != null) return true;
+    const a = store2.answers[id] || {};
+    return Boolean(a.question && a.question.trim());
+  };
+  var createStore = (plan, saved) => {
+    const store2 = {
+      plan,
+      saved,
+      round: plan.round || 1,
+      lsKey: "plan-html:" + (plan.slug || plan.title || "plan"),
+      // answers[id] = { choice, answer, question, edit, dismissed, order, grill }
+      answers: {},
+      // cards the user authored in the browser, merged into their section at render.
+      added: EMPTY_ADDED(),
+      // editable working copy of the final-verify rows; null until first seeded.
+      fvState: null,
+      // global requests to the agent for the next round.
+      agentActions: { reexplore: false, note: "" },
+      // card registry (rebuilt every render) and add-button registry.
+      cards: [],
+      addBtns: [],
+      // cards awaiting a live agent reply: cardId -> { len, text }.
+      pendingAsk: {}
+    };
+    store2.ans = (id) => store2.answers[id] = store2.answers[id] || {};
+    store2.byId = (id) => findCard(store2, id);
+    store2.dismissed = (id) => isDismissed(store2, id);
+    store2.satisfied = (id) => isSatisfied(store2, id);
+    store2.hasQuestion = (id) => hasQuestion(store2, id);
+    store2.hasInput = (id) => store2.satisfied(id) || store2.hasQuestion(id);
+    store2.saveState = () => ({
+      round: store2.round,
+      answers: store2.answers,
+      agentActions: store2.agentActions,
+      added: store2.added,
+      fvState: store2.fvState
+    });
+    return store2;
+  };
+  var restore = (store2) => {
+    let src = store2.saved;
     if (!src) {
-      try { src = JSON.parse(localStorage.getItem(LS_KEY) || "null"); }
-      catch (e) { console.warn("localStorage restore failed", e); src = null; }
+      try {
+        src = JSON.parse(localStorage.getItem(store2.lsKey) || "null");
+      } catch (e) {
+        console.warn("localStorage restore failed", e);
+        src = null;
+      }
     }
     if (!src || !src.answers) return;
-    answers = src.answers;
-    if (src.added) added = { intents: [], boundaries: [], decisions: [], steps: [], ...src.added };
-    const stale = (src.round || 1) < ROUND;
-    // a new round means the agent rebuilt the plan (incl. finalVerify) — let it
-    // reseed from PLAN; only carry the edited finish-line rows within a round
-    if (src.fvState && !stale) fvState = src.fvState;
-    // questions and agent-requests from a previous round were delivered —
-    // clear them so they aren't re-sent
+    store2.answers = src.answers;
+    if (src.added) store2.added = { ...EMPTY_ADDED(), ...src.added };
+    const stale = (src.round || 1) < store2.round;
+    if (src.fvState && !stale) store2.fvState = src.fvState;
     if (stale) {
-      Object.values(answers).forEach(a => { delete a.question; });
+      Object.values(store2.answers).forEach((a) => {
+        delete a.question;
+      });
     } else if (src.agentActions) {
-      agentActions = { reexplore: false, note: "", ...src.agentActions };
+      store2.agentActions = { reexplore: false, note: "", ...src.agentActions };
     }
   };
-  restore();
-  const ans = id => (answers[id] = answers[id] || {});
-
-  // ---------- autosave: localStorage immediately, server debounced ----------
-  const saveState = () => ({ round: ROUND, answers, agentActions, added, fvState });
-  let saveTimer = null;
-  const saveEl = () => document.getElementById("savestate");
-  const persist = () => {
-    try { localStorage.setItem(LS_KEY, JSON.stringify(saveState())); }
-    catch (e) { console.warn("localStorage save failed", e); }
-    refreshAddBtns();   // flip +/− live as a trailing blank card gains content
-    saveEl().textContent = "Saving…"; saveEl().className = "savestate";
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(async () => {
+  var createPersist = (store2, onPersist) => {
+    let saveTimer = null;
+    const saveEl = () => document.getElementById("savestate");
+    const persist2 = () => {
       try {
-        const r = await fetch("/save", { method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(saveState()) });
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        saveEl().textContent = "Saved ✓"; saveEl().className = "savestate ok";
+        localStorage.setItem(store2.lsKey, JSON.stringify(store2.saveState()));
       } catch (e) {
-        // server gone (e.g. timed out) — answers still live in localStorage
-        saveEl().textContent = "Saved locally only"; saveEl().className = "savestate warn";
+        console.warn("localStorage save failed", e);
       }
-    }, 500);
+      if (onPersist) onPersist();
+      saveEl().textContent = "Saving…";
+      saveEl().className = "savestate";
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(async () => {
+        try {
+          const r = await fetch("/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(store2.saveState())
+          });
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          saveEl().textContent = "Saved ✓";
+          saveEl().className = "savestate ok";
+        } catch (e) {
+          saveEl().textContent = "Saved locally only";
+          saveEl().className = "savestate warn";
+        }
+      }, 500);
+    };
+    return { persist: persist2 };
   };
+  var titleOf = (d) => d.title || d.id;
 
-  // ---------- card registry ----------
-  // cards: { id, kind: "intent"|"decision", data, refresh() }
-  const cards = [];
-  const byId = id =>
-    (PLAN.boundaries || []).find(d => d.id === id) ||
-    (PLAN.intents || []).find(d => d.id === id) ||
-    (PLAN.decisions || []).find(d => d.id === id) ||
-    added.boundaries.find(d => d.id === id) ||
-    added.intents.find(d => d.id === id) ||
-    added.decisions.find(d => d.id === id) ||
-    added.steps.find(d => d.id === id);
-  const titleOf = d => d.title || d.id;
-
-  // cards awaiting a live agent reply (cardId -> thread length when asked).
-  // An outstanding question blocks Finalize until the agent answers.
-  const pendingAsk = {};
-  const dismissed = id => Boolean((answers[id] || {}).dismissed);
-  const satisfied = id => {
-    if (dismissed(id)) return true;   // ticked off — counts as resolved, won't block
-    // a card the user authored counts as answered once it has a title — the
-    // agent fleshes out the rest next round
-    const card = byId(id);
-    if (card && card.userAdded && (card.title || "").trim()) return true;
-    const a = answers[id] || {};
-    return Boolean(a.choice || (a.answer && a.answer.trim()) ||
-      (a.edit && a.edit.trim()));
-  };
-  const hasQuestion = id => {
-    if (dismissed(id)) return false;
-    if (pendingAsk[id] != null) return true;           // awaiting a live reply
-    const a = answers[id] || {};
-    return Boolean(a.question && a.question.trim());    // non-live: rides next round
-  };
-  const hasInput = id => satisfied(id) || hasQuestion(id);
-
-  const refreshAll = () => { cards.forEach(c => c.refresh()); refreshBar(); };
-  const touched = () => { persist(); refreshAll(); };
-
-  // ---------- lightbox: enlarge any mock or diagram ----------
-  const lightbox = document.getElementById("lightbox");
-  const openLightbox = (title, fill) => {
-    document.getElementById("lbTitle").textContent = title || "";
-    const c = document.getElementById("lbContent");
-    c.innerHTML = "";
-    fill(c);
-    lightbox.classList.add("show");
-  };
-  lightbox.addEventListener("click", e => {
-    if (e.target === lightbox) lightbox.classList.remove("show");
-  });
-  document.getElementById("lbClose").addEventListener("click",
-    () => lightbox.classList.remove("show"));
-  document.addEventListener("keydown", e => {
-    if (e.key === "Escape") lightbox.classList.remove("show");
-  });
-  const zoomableDiagram = (container, title) => {
-    container.title = "Click to enlarge";
-    container.addEventListener("click", () =>
-      openLightbox(title, c => { c.innerHTML = container.innerHTML; }));
-  };
-
-  // ---------- shared card builder ----------
-  const buildCard = (d, i, kind, container) => {
-    const card = el("div", "card");
+  // src/cards.js
+  var chipClass = (s) => s === "needs-you" ? "you" : s === "agent-call" ? "agent" : "fyi";
+  var chipText = (s) => s === "needs-you" ? "needs you" : s === "agent-call" ? "agent's call" : "FYI";
+  var buildCard = (app2, d, i, kind, container) => {
+    const { store: store2, el: el2, mdEl: mdEl2, md: md2, escapeHtml: escapeHtml2, persist: persist2, touched, openLightbox: openLightbox2, zoomableDiagram: zoomableDiagram2 } = app2;
+    const { answers } = store2;
+    const ans = store2.ans;
+    const byId = store2.byId;
+    const dismissed = store2.dismissed;
+    const satisfied = store2.satisfied;
+    const hasQuestion2 = store2.hasQuestion;
+    const card = el2("div", "card");
     card.dataset.id = d.id;
-
-    const head = el("div", "card-head");
-    const grip = el("span", "grip", "⠿");
+    const head = el2("div", "card-head");
+    const grip = el2("span", "grip", "⠿");
     grip.title = "Drag to set priority order";
     head.appendChild(grip);
-    head.appendChild(el("span", "chev", "▶"));
-    head.appendChild(el("span",
-      kind === "intent" ? "chip intent"
-        : kind === "boundary" ? "chip boundary"
-        : kind === "step" ? "chip step"
-        : "chip " + chipClass(d.status),
-      kind === "intent" ? "intent" : kind === "boundary" ? "boundary"
-        : kind === "step" ? "step" : chipText(d.status)));
-    const titleWrap = el("div", "card-title");
-    const prefix = kind === "intent" ? `I${i + 1}. `
-      : kind === "boundary" ? `B${i + 1}. `
-      : kind === "step" ? `Step ${i + 1} — ` : `${i + 1}. `;
-    const titleEl = el("div", "t", prefix + (titleOf(d) || "Untitled"));
+    head.appendChild(el2("span", "chev", "▶"));
+    head.appendChild(el2(
+      "span",
+      kind === "intent" ? "chip intent" : kind === "boundary" ? "chip boundary" : kind === "step" ? "chip step" : "chip " + chipClass(d.status),
+      kind === "intent" ? "intent" : kind === "boundary" ? "boundary" : kind === "step" ? "step" : chipText(d.status)
+    ));
+    const titleWrap = el2("div", "card-title");
+    const prefix = kind === "intent" ? `I${i + 1}. ` : kind === "boundary" ? `B${i + 1}. ` : kind === "step" ? `Step ${i + 1} — ` : `${i + 1}. `;
+    const titleEl = el2("div", "t", prefix + (titleOf(d) || "Untitled"));
     titleWrap.appendChild(titleEl);
-    const summaryLine = el("div", "s", d.summary || "");
+    const summaryLine = el2("div", "s", d.summary || "");
     if (!d.summary) summaryLine.style.display = "none";
     titleWrap.appendChild(summaryLine);
     head.appendChild(titleWrap);
-    if (d.userAdded) head.appendChild(el("span", "added-tag", "added by you"));
-
-    // inline quick-answer — answer common picks without expanding the card
-    const quick = el("div", "quick");
+    if (d.userAdded) head.appendChild(el2("span", "added-tag", "added by you"));
+    const quick = el2("div", "quick");
     head.appendChild(quick);
-
-    const state = el("div", "state", "—");
+    const state = el2("div", "state", "—");
     head.appendChild(state);
-
-    // dismiss / restore — tick a card off (boundaries can be dropped; others set aside)
-    const dropBtn = el("button", "icon-btn drop", "✕");
+    const dropBtn = el2("button", "icon-btn drop", "✕");
     dropBtn.type = "button";
     dropBtn.title = "Strike out — removed from the plan when you send the round";
-    dropBtn.addEventListener("click", ev => {
+    dropBtn.addEventListener("click", (ev) => {
       ev.stopPropagation();
       const a = ans(d.id);
       a.dismissed = !a.dismissed;
       touched();
     });
     head.appendChild(dropBtn);
-
     head.addEventListener("click", () => card.classList.toggle("open"));
     card.appendChild(head);
-
-    const body = el("div", "card-body");
-
-    // --- inline authoring ---
-    // Real input fields bound straight to the card object `d`. Shown for cards
-    // the user added (author from scratch) AND for ALL step cards (steps are
-    // editable in place — the user can rewrite or delete any step). Edits write
-    // to `d`, refresh the title, and autosave.
+    const body = el2("div", "card-body");
     const authorable = d.userAdded || kind === "step";
     if (authorable) {
-      const auth = el("div", "blk authoring");
-      auth.appendChild(el("div", "lbl",
-        d.userAdded ? `New ${kind} — fill in what you can` : "Edit this step"));
-      // Editing an AGENT step mutates a copy in the persisted `added.steps`
-      // bucket (not PLAN, which a live SSE update would overwrite). On first
-      // edit we relocate this card's data there so the change survives reload
-      // and reconcile. `target` is whatever object the fields write to.
+      const auth = el2("div", "blk authoring");
+      auth.appendChild(el2(
+        "div",
+        "lbl",
+        d.userAdded ? `New ${kind} — fill in what you can` : "Edit this step"
+      ));
       let target = d;
       const ensurePersisted = () => {
-        if (target.userAdded || added.steps.some(s => s.id === target.id)) return;
-        // relocate this agent step's data into the persisted added.steps bucket
-        // (keyed by the same id, so render swaps it back into its position)
+        if (target.userAdded || store2.added.steps.some((s) => s.id === target.id)) return;
         const copy = { ...target, kind: "step", userEdited: true };
-        added.steps.push(copy);
+        store2.added.steps.push(copy);
         target = copy;
       };
-      // field(label, key, {area, placeholder, onInput}) → bound input/textarea
-      const field = (label, key, opts = {}) => {
-        const wrap = el("div", "afield");
-        wrap.appendChild(el("label", "albl", label));
-        const inp = opts.area ? el("textarea") : el("input");
-        if (!opts.area) inp.type = "text";
+      const field = (label, key, opts2 = {}) => {
+        const wrap = el2("div", "afield");
+        wrap.appendChild(el2("label", "albl", label));
+        const inp = opts2.area ? el2("textarea") : el2("input");
+        if (!opts2.area) inp.type = "text";
         inp.className = "ainput";
-        inp.placeholder = opts.placeholder || "";
+        inp.placeholder = opts2.placeholder || "";
         inp.value = d[key] || "";
         inp.addEventListener("input", () => {
           if (kind === "step") ensurePersisted();
           target[key] = inp.value;
-          if (opts.onInput) opts.onInput();
-          persist();
+          if (opts2.onInput) opts2.onInput();
+          persist2();
         });
         wrap.appendChild(inp);
         auth.appendChild(wrap);
         return inp;
       };
-      const syncTitle = () => { titleEl.textContent = prefix + (d.title || "Untitled"); };
+      const syncTitle = () => {
+        titleEl.textContent = prefix + (d.title || "Untitled");
+      };
       const syncSummary = () => {
         summaryLine.textContent = d.summary || "";
         summaryLine.style.display = d.summary ? "" : "none";
       };
       field("Title", "title", { placeholder: "Short title…", onInput: syncTitle });
       if (kind === "intent") {
-        field("The intent (what you want + why)", "intent",
-          { area: true, placeholder: "I want… so that…" });
+        field(
+          "The intent (what you want + why)",
+          "intent",
+          { area: true, placeholder: "I want… so that…" }
+        );
         d.verify = d.verify || { method: "", command: "", expected: "" };
-        const vrow = el("div", "afield");
-        vrow.appendChild(el("label", "albl", "How we verify this (optional — agent can fill in)"));
-        const vbox = el("div", "averify");
-        ["method", "command", "expected"].forEach(k => {
-          const inp = el("input"); inp.type = "text"; inp.className = "ainput";
-          inp.placeholder = k; inp.value = d.verify[k] || "";
-          inp.addEventListener("input", () => { d.verify[k] = inp.value; persist(); });
+        const vrow = el2("div", "afield");
+        vrow.appendChild(el2("label", "albl", "How we verify this (optional — agent can fill in)"));
+        const vbox = el2("div", "averify");
+        ["method", "command", "expected"].forEach((k) => {
+          const inp = el2("input");
+          inp.type = "text";
+          inp.className = "ainput";
+          inp.placeholder = k;
+          inp.value = d.verify[k] || "";
+          inp.addEventListener("input", () => {
+            d.verify[k] = inp.value;
+            persist2();
+          });
           vbox.appendChild(inp);
         });
         vrow.appendChild(vbox);
         auth.appendChild(vrow);
       } else if (kind === "boundary") {
-        field("The boundary (what's in/out of scope, what not to touch)", "boundary",
-          { area: true, placeholder: "In scope… Out of scope… Do not touch…" });
+        field(
+          "The boundary (what's in/out of scope, what not to touch)",
+          "boundary",
+          { area: true, placeholder: "In scope… Out of scope… Do not touch…" }
+        );
       } else if (d.kind === "step" || kind === "step") {
         field("Description", "description", { area: true, placeholder: "What this step does…" });
         field("Files", "files", { placeholder: "path/to/file" });
         field("Test", "test", { placeholder: "e2e / unit / …" });
         field("Intent it serves", "intent", { placeholder: "intent-id" });
       } else {
-        // decision
         field("One-line summary", "summary", { placeholder: "Shown on the collapsed card", onInput: syncSummary });
         field("What we're building", "building", { area: true, placeholder: "Describe the fork / what's being decided…" });
-        const orow = el("div", "afield");
-        orow.appendChild(el("label", "albl", "Options (one per line — leave blank for Approve/Reject)"));
-        const ota = el("textarea"); ota.className = "ainput";
+        const orow = el2("div", "afield");
+        orow.appendChild(el2("label", "albl", "Options (one per line — leave blank for Approve/Reject)"));
+        const ota = el2("textarea");
+        ota.className = "ainput";
         ota.placeholder = "Option A\nOption B";
-        ota.value = (d.options || []).filter(o => typeof o === "string").join("\n");
+        ota.value = (d.options || []).filter((o) => typeof o === "string").join("\n");
         ota.addEventListener("input", () => {
-          d.options = ota.value.split("\n").map(s => s.trim()).filter(Boolean);
-          persist();
+          d.options = ota.value.split("\n").map((s) => s.trim()).filter(Boolean);
+          persist2();
         });
         orow.appendChild(ota);
         auth.appendChild(orow);
-        const srow = el("div", "afield");
-        srow.appendChild(el("label", "albl", "Who decides"));
-        const sel = el("select"); sel.className = "ainput";
-        [["needs-you", "Needs you"], ["agent-call", "Agent's call"], ["fyi", "FYI"]]
-          .forEach(([v, t]) => { const o = el("option", null, t); o.value = v; sel.appendChild(o); });
+        const srow = el2("div", "afield");
+        srow.appendChild(el2("label", "albl", "Who decides"));
+        const sel = el2("select");
+        sel.className = "ainput";
+        [["needs-you", "Needs you"], ["agent-call", "Agent's call"], ["fyi", "FYI"]].forEach(([v, t]) => {
+          const o = el2("option", null, t);
+          o.value = v;
+          sel.appendChild(o);
+        });
         sel.value = d.status || "needs-you";
-        sel.addEventListener("change", () => { d.status = sel.value; persist(); });
+        sel.addEventListener("change", () => {
+          d.status = sel.value;
+          persist2();
+        });
         srow.appendChild(sel);
         auth.appendChild(srow);
       }
       body.appendChild(auth);
     }
-
-    // --- intent/boundary text (editable in place) ---
-    // (user-added cards author this directly above, so skip the review/edit view)
     if (!d.userAdded && (kind === "intent" || kind === "boundary")) {
       const baseText = kind === "intent" ? d.intent : d.boundary;
-      const blk = el("div", "blk");
-      blk.appendChild(el("div", "lbl", kind === "intent" ? "The intent" : "The boundary"));
-      const textView = el("div", "intent-view");
+      const blk = el2("div", "blk");
+      blk.appendChild(el2("div", "lbl", kind === "intent" ? "The intent" : "The boundary"));
+      const textView = el2("div", "intent-view");
       const renderText = () => {
         const a = answers[d.id] || {};
-        textView.innerHTML = md((a.edit && a.edit.trim()) ? a.edit : baseText);
+        textView.innerHTML = md2(a.edit && a.edit.trim() ? a.edit : baseText);
         if (a.edit && a.edit.trim() && a.edit !== baseText) {
-          textView.appendChild(el("span", "edited-tag", "edited by you"));
+          textView.appendChild(el2("span", "edited-tag", "edited by you"));
         }
       };
       renderText();
       blk.appendChild(textView);
-      const editBtn = el("button", "opt ghost intent-edit-btn", `Edit this ${kind}`);
+      const editBtn = el2("button", "opt ghost intent-edit-btn", `Edit this ${kind}`);
       editBtn.type = "button";
-      const editTa = el("textarea");
+      const editTa = el2("textarea");
       editTa.style.display = "none";
       editTa.placeholder = `Rewrite the ${kind} in your words…`;
       const a0i = answers[d.id] || {};
@@ -1045,7 +1049,7 @@
       }
       editBtn.addEventListener("click", () => {
         const a = ans(d.id);
-        editTa.value = (a.edit && a.edit.trim()) ? a.edit : baseText;
+        editTa.value = a.edit && a.edit.trim() ? a.edit : baseText;
         editTa.style.display = "";
         editTa.focus();
       });
@@ -1059,100 +1063,96 @@
       blk.appendChild(editTa);
       body.appendChild(blk);
     }
-
-    // --- agent's grill / clarifying questions (mostly on intents) ---
-    // The agent poses pointed questions to sharpen a fuzzy intent. Each renders
-    // with its own answer box; answers persist in answers[id].grill[qid] and
-    // ride back with the round. Soft-gating: surfaced + counted, never blocking.
     if (d.agentQuestions && d.agentQuestions.length) {
-      const blk = el("div", "blk grill-blk");
-      const lbl = el("div", "lbl", "Help me sharpen this — a few clarifying questions");
+      const blk = el2("div", "blk grill-blk");
+      const lbl = el2("div", "lbl", "Help me sharpen this — a few clarifying questions");
       blk.appendChild(lbl);
       const a = ans(d.id);
       a.grill = a.grill || {};
       d.agentQuestions.forEach((gq, qi) => {
         const qid = (typeof gq === "object" ? gq.id : null) || `q${qi}`;
         const qtext = typeof gq === "object" ? gq.q : gq;
-        const item = el("div", "grill-q");
-        const qline = el("div", "grill-ask");
-        qline.innerHTML = md(qtext).replace(/^<p>|<\/p>$/g, "");
+        const item = el2("div", "grill-q");
+        const qline = el2("div", "grill-ask");
+        qline.innerHTML = md2(qtext).replace(/^<p>|<\/p>$/g, "");
         item.appendChild(qline);
-        const ta = el("textarea", "ainput grill-ans");
-        ta.rows = 2;
-        ta.placeholder = "Your answer…";
-        ta.value = (a.grill[qid] || "");
-        const markAnswered = () => item.classList.toggle("answered", Boolean(ta.value.trim()));
+        const ta2 = el2("textarea", "ainput grill-ans");
+        ta2.rows = 2;
+        ta2.placeholder = "Your answer…";
+        ta2.value = a.grill[qid] || "";
+        const markAnswered = () => item.classList.toggle("answered", Boolean(ta2.value.trim()));
         markAnswered();
-        ta.addEventListener("input", () => {
-          ans(d.id).grill[qid] = ta.value;
+        ta2.addEventListener("input", () => {
+          ans(d.id).grill[qid] = ta2.value;
           markAnswered();
           touched();
         });
-        item.appendChild(ta);
+        item.appendChild(ta2);
         blk.appendChild(item);
       });
       body.appendChild(blk);
     }
-
-    // --- descriptive blocks (markdown-rendered) ---
-    if (d.building && !d.userAdded) { const b = el("div", "blk");
-      b.appendChild(el("div", "lbl", "What we're building"));
-      b.appendChild(mdEl(null, d.building)); body.appendChild(b); }
-    if (d.tradeoffs && d.tradeoffs.length) { const b = el("div", "blk");
-      b.appendChild(el("div", "lbl", "Tradeoffs"));
-      const ul = el("ul", "tradeoffs");
-      d.tradeoffs.forEach(t => { const li = el("li");
-        li.innerHTML = md(t).replace(/^<p>|<\/p>$/g, ""); ul.appendChild(li); });
-      b.appendChild(ul); body.appendChild(b); }
-
-    // --- related cards (dependsOn) — live view of your other answers ---
+    if (d.building && !d.userAdded) {
+      const b = el2("div", "blk");
+      b.appendChild(el2("div", "lbl", "What we're building"));
+      b.appendChild(mdEl2(null, d.building));
+      body.appendChild(b);
+    }
+    if (d.tradeoffs && d.tradeoffs.length) {
+      const b = el2("div", "blk");
+      b.appendChild(el2("div", "lbl", "Tradeoffs"));
+      const ul = el2("ul", "tradeoffs");
+      d.tradeoffs.forEach((t) => {
+        const li = el2("li");
+        li.innerHTML = md2(t).replace(/^<p>|<\/p>$/g, "");
+        ul.appendChild(li);
+      });
+      b.appendChild(ul);
+      body.appendChild(b);
+    }
     let relatedEl = null;
     if (d.dependsOn && d.dependsOn.length) {
-      const b = el("div", "blk");
-      b.appendChild(el("div", "lbl", "Related — your answers elsewhere"));
-      relatedEl = el("div", "related");
+      const b = el2("div", "blk");
+      b.appendChild(el2("div", "lbl", "Related — your answers elsewhere"));
+      relatedEl = el2("div", "related");
       b.appendChild(relatedEl);
       body.appendChild(b);
     }
     const renderRelated = () => {
       if (!relatedEl) return;
       relatedEl.innerHTML = "";
-      d.dependsOn.forEach(rid => {
+      d.dependsOn.forEach((rid) => {
         const rd = byId(rid);
-        const line = el("div", "rel-line");
+        const line = el2("div", "rel-line");
         const a = answers[rid] || {};
         const t = rd ? titleOf(rd) : rid;
-        if (a.choice || (a.answer && a.answer.trim())) {
-          line.innerHTML = `<b>${escapeHtml(t)}</b> — you said: ` +
-            `<span class="rel-choice">${escapeHtml(a.choice || "")}` +
-            `${a.choice && a.answer && a.answer.trim() ? " · " : ""}` +
-            `${escapeHtml((a.answer || "").trim().slice(0, 140))}</span>`;
+        if (a.choice || a.answer && a.answer.trim()) {
+          line.innerHTML = `<b>${escapeHtml2(t)}</b> — you said: <span class="rel-choice">${escapeHtml2(a.choice || "")}${a.choice && a.answer && a.answer.trim() ? " · " : ""}${escapeHtml2((a.answer || "").trim().slice(0, 140))}</span>`;
         } else if (a.edit && a.edit.trim()) {
-          line.innerHTML = `<b>${escapeHtml(t)}</b> — you rewrote it: ` +
-            `<span class="rel-choice">${escapeHtml(a.edit.trim().slice(0, 140))}</span>`;
+          line.innerHTML = `<b>${escapeHtml2(t)}</b> — you rewrote it: <span class="rel-choice">${escapeHtml2(a.edit.trim().slice(0, 140))}</span>`;
         } else {
-          line.innerHTML = `<b>${escapeHtml(t)}</b> — ` +
-            `<span class="rel-none">not answered yet</span>`;
+          line.innerHTML = `<b>${escapeHtml2(t)}</b> — <span class="rel-none">not answered yet</span>`;
         }
         relatedEl.appendChild(line);
       });
     };
-
-    // --- verify block (per intent/decision) ---
-    // (user-added cards author verify inline above — no read-only echo)
     if (d.verify && !d.userAdded) {
-      const b = el("div", "blk");
-      b.appendChild(el("div", "lbl", "How we verify this"));
-      const v = el("div", "verify");
+      const b = el2("div", "blk");
+      b.appendChild(el2("div", "lbl", "How we verify this"));
+      const v = el2("div", "verify");
       if (typeof d.verify === "string") {
-        v.appendChild(mdEl(null, d.verify));
+        v.appendChild(mdEl2(null, d.verify));
       } else {
-        const row = (k, val, cmd) => { if (!val) return;
-          const r = el("div", "vrow"); r.appendChild(el("div", "vk", k));
-          const vv = el("div", "vv" + (cmd ? " cmd" : ""));
+        const row = (k, val, cmd) => {
+          if (!val) return;
+          const r = el2("div", "vrow");
+          r.appendChild(el2("div", "vk", k));
+          const vv = el2("div", "vv" + (cmd ? " cmd" : ""));
           if (cmd) vv.textContent = val;
-          else vv.innerHTML = md(val).replace(/^<p>|<\/p>$/g, "");
-          r.appendChild(vv); v.appendChild(r); };
+          else vv.innerHTML = md2(val).replace(/^<p>|<\/p>$/g, "");
+          r.appendChild(vv);
+          v.appendChild(r);
+        };
         row("Method", d.verify.method);
         row("Command", d.verify.command, true);
         row("Expected", d.verify.expected);
@@ -1160,49 +1160,39 @@
       b.appendChild(v);
       body.appendChild(b);
     }
-
-    // --- per-card diagram ---
     if (d.diagramSvg) {
-      const b = el("div", "blk");
-      b.appendChild(el("div", "lbl", "Diagram"));
-      const dv = el("div", "diagram");
-      dv.innerHTML =
-        `<svg viewBox="${d.diagramViewBox || '0 0 720 240'}" role="img" aria-label="card diagram">
+      const b = el2("div", "blk");
+      b.appendChild(el2("div", "lbl", "Diagram"));
+      const dv = el2("div", "diagram");
+      dv.innerHTML = `<svg viewBox="${d.diagramViewBox || "0 0 720 240"}" role="img" aria-label="card diagram">
            <defs><marker id="arrow-${d.id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
              markerHeight="7" orient="auto-start-reverse">
              <path d="M0,0 L10,5 L0,10 z" fill="#9aa3b2"/></marker></defs>
            ${d.diagramSvg.replaceAll("url(#arrow)", `url(#arrow-${d.id})`)}</svg>`;
-      zoomableDiagram(dv, d.title || "Diagram");
+      zoomableDiagram2(dv, d.title || "Diagram");
       b.appendChild(dv);
       body.appendChild(b);
     }
-
-    // --- Q&A with the agent: a live chat (thread + composer pinned below it) ---
-    // The composer is ALWAYS here (not buried in "Your answer"), so after the
-    // agent replies you just type a follow-up and send again — a real back and
-    // forth. Distinct from the decision answer below.
-    // Steps have no question/answer controls — they're just authored fields.
     if (kind !== "step") {
       const hasThread = d.thread && d.thread.length;
-      const b = el("div", "blk chat-blk");
-      b.appendChild(el("div", "lbl", "Discuss with the agent"));
-      const th = el("div", "thread");
+      const b = el2("div", "blk chat-blk");
+      b.appendChild(el2("div", "lbl", "Discuss with the agent"));
+      const th = el2("div", "thread");
       if (hasThread) {
-        d.thread.forEach(m => {
-          const msg = el("div", "msg");
-          msg.appendChild(el("div", "who " + (m.role === "agent" ? "agent" : "user"),
-            m.role === "agent" ? "Agent" : "You"));
-          msg.appendChild(mdEl(null, m.text));
+        d.thread.forEach((m) => {
+          const msg = el2("div", "msg");
+          msg.appendChild(el2(
+            "div",
+            "who " + (m.role === "agent" ? "agent" : "user"),
+            m.role === "agent" ? "Agent" : "You"
+          ));
+          msg.appendChild(mdEl2(null, m.text));
           th.appendChild(msg);
         });
       }
       th.style.display = hasThread ? "" : "none";
       b.appendChild(th);
-
-      // awaiting bubble — shown while a sent message has no reply yet. If no
-      // reply lands within ~25s, switch to an honest "queued, no agent
-      // watching" message so an unattended deck doesn't masquerade as a slow AI.
-      const awaitMsg = el("div", "ask-pending chat-await", "agent is replying…");
+      const awaitMsg = el2("div", "ask-pending chat-await", "agent is replying…");
       awaitMsg.style.display = "none";
       b.appendChild(awaitMsg);
       let awaitTimer = null;
@@ -1212,185 +1202,185 @@
         awaitMsg.classList.remove("stale");
         clearTimeout(awaitTimer);
         awaitTimer = setTimeout(() => {
-          awaitMsg.textContent =
-            "still queued — no agent is watching this deck right now; "
-            + "it'll answer as soon as one is.";
+          awaitMsg.textContent = "still queued — no agent is watching this deck right now; it'll answer as soon as one is.";
           awaitMsg.classList.add("stale");
-        }, 25000);
+        }, 25e3);
       };
-      const stopAwait = () => { clearTimeout(awaitTimer); awaitMsg.style.display = "none"; };
-      // let reconcile() reach these per-card hooks across rebuilds
+      const stopAwait = () => {
+        clearTimeout(awaitTimer);
+        awaitMsg.style.display = "none";
+      };
       awaitMsg._startAwait = startAwait;
       awaitMsg._stopAwait = stopAwait;
-
-      // composer: textarea + Send. Enter sends, Shift+Enter newlines.
-      const composer = el("div", "composer");
-      const cta = el("textarea", "chat-input");
+      const composer = el2("div", "composer");
+      const cta = el2("textarea", "chat-input");
       cta.rows = 2;
-      cta.placeholder = hasThread
-        ? "Reply, comment, or ask a follow-up — sends straight to the agent…"
-        : "Comment, question, or push back — sends straight to the agent…";
-      const sendQ = el("button", "btn chat-send", "Send ▸");
+      cta.placeholder = hasThread ? "Reply, comment, or ask a follow-up — sends straight to the agent…" : "Comment, question, or push back — sends straight to the agent…";
+      const sendQ = el2("button", "btn chat-send", "Send ▸");
       sendQ.type = "button";
       const sendNow = () => {
         const text = cta.value.trim();
-        if (!text) { cta.focus(); return; }
-        // optimistic: show your message immediately
-        const mine = el("div", "msg");
-        mine.appendChild(el("div", "who user", "You"));
-        mine.appendChild(mdEl(null, text));
-        th.style.display = ""; th.appendChild(mine);
+        if (!text) {
+          cta.focus();
+          return;
+        }
+        const mine = el2("div", "msg");
+        mine.appendChild(el2("div", "who user", "You"));
+        mine.appendChild(mdEl2(null, text));
+        th.style.display = "";
+        th.appendChild(mine);
         startAwait();
         cta.value = "";
         if (window.__askNow) window.__askNow(d.id, text);
-        else { ans(d.id).question = text; touched(); }   // non-live fallback → next round
+        else {
+          ans(d.id).question = text;
+          touched();
+        }
         cta.focus();
       };
       sendQ.addEventListener("click", sendNow);
-      cta.addEventListener("keydown", e => {
-        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendNow(); }
+      cta.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendNow();
+        }
       });
       composer.appendChild(cta);
       composer.appendChild(sendQ);
       b.appendChild(composer);
       body.appendChild(b);
     }
-
-    // --- answer controls: wireframe mocks + option buttons ---
     const a0 = answers[d.id] || {};
-    const optBlk = el("div", "blk");
-    optBlk.appendChild(el("div", "lbl", "Your decision"));
+    const optBlk = el2("div", "blk");
+    optBlk.appendChild(el2("div", "lbl", "Your decision"));
     const rawOpts = d.options || [];
-    // options can be strings (buttons) or mock objects:
-    //   {label, caption, viewBox, svg}            — lo-fi wireframe
-    //   {label, caption, html, width?, height?}   — hi-fi HTML mock (sandboxed iframe)
-    const mockOpts = rawOpts.filter(o => o && typeof o === "object" && (o.svg || o.html));
-    const plainOpts = rawOpts.filter(o => typeof o === "string");
-    // choiceEls collects every clickable choice (mock tiles, body buttons, quick
-    // buttons) so refresh() can sync the selected highlight across all of them
+    const mockOpts = rawOpts.filter((o) => o && typeof o === "object" && (o.svg || o.html));
+    const plainOpts = rawOpts.filter((o) => typeof o === "string");
     const choiceEls = [];
     const pickChoice = (val) => {
       const a = ans(d.id);
-      a.choice = a.choice === val ? null : val;   // toggle off — free text can stand alone
+      a.choice = a.choice === val ? null : val;
       touched();
     };
     let mocksGrid = null;
     const syncChoiceEls = () => {
       const cur = (answers[d.id] || {}).choice;
       choiceEls.forEach(({ el: e, val }) => e.classList.toggle("sel", val === cur));
-      // dim the unchosen mocks once a mock is picked, so the selection pops
       if (mocksGrid) {
-        const mockPicked = [...mocksGrid.querySelectorAll(".mock")]
-          .some(m => m.classList.contains("sel"));
+        const mockPicked = [...mocksGrid.querySelectorAll(".mock")].some((m) => m.classList.contains("sel"));
         mocksGrid.classList.toggle("has-sel", mockPicked);
       }
     };
     if (mockOpts.length) {
-      const grid = el("div", "mocks");
+      const grid = el2("div", "mocks");
       mocksGrid = grid;
       mockOpts.forEach((o, mi) => {
         const label = o.label || `Option ${mi + 1}`;
         const W = o.width || 800, H = o.height || 600;
-        const makeSvg = () =>
-          `<svg viewBox="${o.viewBox || '0 0 200 140'}" role="img" aria-label="${escapeHtml(label)}">${o.svg}</svg>`;
+        const makeSvg = () => `<svg viewBox="${o.viewBox || "0 0 200 140"}" role="img" aria-label="${escapeHtml2(label)}">${o.svg}</svg>`;
         const makeFrame = () => {
           const fr = document.createElement("iframe");
-          fr.setAttribute("sandbox", "");          // no scripts inside mocks
+          fr.setAttribute("sandbox", "");
           fr.srcdoc = o.html;
-          fr.width = W; fr.height = H;
+          fr.width = W;
+          fr.height = H;
           return fr;
         };
-        const m = el("div", "mock");
+        const m = el2("div", "mock");
         if (o.svg) {
           m.innerHTML = makeSvg();
         } else {
-          const wrap = el("div", "mock-htmlwrap");
+          const wrap = el2("div", "mock-htmlwrap");
           wrap.style.aspectRatio = `${W} / ${H}`;
           const fr = makeFrame();
           wrap.appendChild(fr);
           m.appendChild(wrap);
-          // scale the full-size mock down to the tile width
           requestAnimationFrame(() => {
             const s = wrap.clientWidth / W;
             if (s > 0 && s < 1) fr.style.transform = `scale(${s})`;
           });
         }
-        const enlarge = () => openLightbox(label, c => {
+        const enlarge = () => openLightbox2(label, (c) => {
           if (o.svg) c.innerHTML = makeSvg();
           else c.appendChild(makeFrame());
         });
-        const zoom = el("button", "mock-zoom", "⤢");
-        zoom.type = "button"; zoom.title = "Enlarge";
-        zoom.addEventListener("click", ev => { ev.stopPropagation(); enlarge(); });
+        const zoom = el2("button", "mock-zoom", "⤢");
+        zoom.type = "button";
+        zoom.title = "Enlarge";
+        zoom.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          enlarge();
+        });
         m.appendChild(zoom);
-        m.appendChild(el("div", "mock-label", label));
-        if (o.caption) m.appendChild(el("div", "mock-cap", o.caption));
-        const big = el("button", "opt ghost mock-enlarge", "⤢ Open full size");
+        m.appendChild(el2("div", "mock-label", label));
+        if (o.caption) m.appendChild(el2("div", "mock-cap", o.caption));
+        const big = el2("button", "opt ghost mock-enlarge", "⤢ Open full size");
         big.type = "button";
-        big.addEventListener("click", ev => { ev.stopPropagation(); enlarge(); });
+        big.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          enlarge();
+        });
         m.appendChild(big);
         choiceEls.push({ el: m, val: label });
         m.addEventListener("click", () => pickChoice(label));
         grid.appendChild(m);
       });
-      // the mocks ARE the decision — they lead the card, prose follows below
-      const mocksBlk = el("div", "blk mocks-lead");
-      mocksBlk.appendChild(el("div", "lbl", "The directions — click one to pick it"));
+      const mocksBlk = el2("div", "blk mocks-lead");
+      mocksBlk.appendChild(el2("div", "lbl", "The directions — click one to pick it"));
       mocksBlk.appendChild(grid);
       body.prepend(mocksBlk);
-      card.classList.add("open");  // mocks must be visible without clicking
+      card.classList.add("open");
     }
-    const opts = el("div", "opts");
-    const choices = (mockOpts.length || plainOpts.length)
-      ? plainOpts.map(o => ({ kind: "custom", label: o }))
-      : kind === "intent"
-        ? [{ kind: "approve", label: "This is what I want" },
-           { kind: "reject", label: "Not quite — see my notes/edit" }]
-        : kind === "boundary"
-          ? [{ kind: "approve", label: "Agreed — respect this" },
-             { kind: "reject", label: "Not quite — see my notes/edit" },
-             { kind: "custom", label: "Not needed — drop it" }]
-          : [{ kind: "approve", label: "Approve" },
-             { kind: "reject", label: "Reject / change" },
-             { kind: "agent", label: "Your call, agent" }];
-    const valOf = c => c.kind === "custom" ? c.label : c.kind;
-    // inline quick-answer buttons on the collapsed head — text choices only
-    // (mock picks need the visual, so those stay in the body). Short labels.
+    const opts = el2("div", "opts");
+    const choices = mockOpts.length || plainOpts.length ? plainOpts.map((o) => ({ kind: "custom", label: o })) : kind === "intent" ? [
+      { kind: "approve", label: "This is what I want" },
+      { kind: "reject", label: "Not quite — see my notes/edit" }
+    ] : kind === "boundary" ? [
+      { kind: "approve", label: "Agreed — respect this" },
+      { kind: "reject", label: "Not quite — see my notes/edit" },
+      { kind: "custom", label: "Not needed — drop it" }
+    ] : [
+      { kind: "approve", label: "Approve" },
+      { kind: "reject", label: "Reject / change" },
+      { kind: "agent", label: "Your call, agent" }
+    ];
+    const valOf = (c) => c.kind === "custom" ? c.label : c.kind;
     if (!mockOpts.length) {
-      choices.forEach(c => {
-        const qb = el("button", "qbtn", c.label);
-        qb.type = "button"; qb.dataset.kind = c.kind;
+      choices.forEach((c) => {
+        const qb = el2("button", "qbtn", c.label);
+        qb.type = "button";
+        qb.dataset.kind = c.kind;
         qb.title = c.label;
         const val = valOf(c);
-        qb.addEventListener("click", ev => { ev.stopPropagation(); pickChoice(val); });
+        qb.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          pickChoice(val);
+        });
         choiceEls.push({ el: qb, val });
         quick.appendChild(qb);
       });
     }
-    choices.forEach(c => {
-      const btn = el("button", "opt", c.label);
-      btn.type = "button"; btn.dataset.kind = c.kind;
+    choices.forEach((c) => {
+      const btn = el2("button", "opt", c.label);
+      btn.type = "button";
+      btn.dataset.kind = c.kind;
       const val = valOf(c);
       btn.addEventListener("click", () => pickChoice(val));
       choiceEls.push({ el: btn, val });
       opts.appendChild(btn);
     });
     if (choices.length) optBlk.appendChild(opts);
-
-    // --- free text — counts as a full answer on its own ---
-    const ta = el("textarea");
-    ta.placeholder = "Or answer in your own words — free text counts as an answer. "
-      + "Add detail, redirect, or explain your pick…";
+    const ta = el2("textarea");
+    ta.placeholder = "Or answer in your own words — free text counts as an answer. Add detail, redirect, or explain your pick…";
     if (a0.answer) ta.value = a0.answer;
-    ta.addEventListener("input", () => { ans(d.id).answer = ta.value; touched(); });
+    ta.addEventListener("input", () => {
+      ans(d.id).answer = ta.value;
+      touched();
+    });
     optBlk.appendChild(ta);
-
-    // steps are authored, not answered — no decision/free-text controls
     if (kind !== "step") body.appendChild(optBlk);
     card.appendChild(body);
     container.appendChild(card);
-
-    // count the agent's grill questions still unanswered on this card (soft)
     const grillOpen = () => {
       if (!(d.agentQuestions && d.agentQuestions.length) || dismissed(d.id)) return 0;
       const g = (answers[d.id] || {}).grill || {};
@@ -1403,12 +1393,9 @@
       renderRelated();
       syncChoiceEls();
       const dz = dismissed(d.id);
-      const q = hasQuestion(d.id), s = satisfied(d.id) && !dz;
+      const q = hasQuestion2(d.id), s = satisfied(d.id) && !dz;
       const go = grillOpen();
-      state.textContent = dz ? "set aside"
-        : q ? (satisfied(d.id) ? "answered + question" : "question for agent")
-        : go ? (s ? `answered · ${go} to clarify` : `${go} to clarify`)
-        : s ? "answered" : "—";
+      state.textContent = dz ? "set aside" : q ? satisfied(d.id) ? "answered + question" : "question for agent" : go ? s ? `answered · ${go} to clarify` : `${go} to clarify` : s ? "answered" : "—";
       state.className = "state" + (dz ? " dz" : go ? " grill" : s ? " set" : q ? " q" : "");
       card.classList.toggle("has-grill", go > 0);
       dropBtn.textContent = dz ? "↩" : "✕";
@@ -1417,402 +1404,351 @@
       card.classList.toggle("questioned", q && !s);
       card.classList.toggle("dismissed", dz);
     };
-    cards.push({ id: d.id, kind, data: d, el: card, refresh });
+    store2.cards.push({ id: d.id, kind, data: d, el: card, refresh });
   };
 
-  // ---------- add cards: blank, editable, user-authored ----------
-  // monotonic-ish unique id without Date.now() noise concerns
-  let addSeq = 0;
-  const newId = (kind) => `user-${kind}-${++addSeq}-${Math.floor(performance.now())}`;
-  const blankCard = (kind) => {
-    const base = { id: newId(kind), userAdded: true, title: "", thread: [] };
-    if (kind === "decision") { base.status = "needs-you"; base.options = []; }
-    if (kind === "step") base.kind = "step";
-    return base;
-  };
-  // an added card the user hasn't typed anything into yet — safe to discard
-  const isEmptyDraft = (c) => {
-    if ((c.title || "").trim()) return false;
-    const fields = ["intent", "boundary", "building", "summary",
-                    "description", "files", "test"];
-    if (fields.some(f => (c[f] || "").trim())) return false;
-    if ((c.options || []).length) return false;
-    const v = c.verify;
-    if (v && (v.method || v.command || v.expected)) return false;
-    return true;
-  };
-  // add buttons register here so their +/− label can flip live as the trailing
-  // blank card gains/loses content (typing doesn't re-render the section)
-  const addBtns = [];
-  const syncAddBtn = (rec) => {
-    const arr = added[rec.bucket];
-    const trailing = arr[arr.length - 1];
-    const openBlank = trailing && isEmptyDraft(trailing);
-    rec.el.textContent = `${openBlank ? "−" : "+"} Add ${rec.label}`;
-    rec.el.classList.toggle("active", Boolean(openBlank));
-    rec.openBlank = openBlank;
-  };
-  const refreshAddBtns = () => addBtns.forEach(syncAddBtn);
-  // "+ Add" button: a TOGGLE. Click + → open a blank authoring card. Click −
-  // → collapse it, discarding the draft only if it's still empty (typed cards
-  // stay). Prevents piling up empty cards.
-  const addBtn = (kind, bucket, container, label) => {
-    const b = el("button", "add-card");
-    b.type = "button";
-    const rec = { el: b, bucket, label, openBlank: false };
-    addBtns.push(rec);
-    syncAddBtn(rec);
-    b.addEventListener("click", () => {
-      const arr = added[bucket];
-      if (rec.openBlank) {
-        // collapse: drop the trailing empty draft
-        arr.pop();
-        persist();
+  // src/sections.js
+  var createSections = (app2) => {
+    const { store: store2, el: el2, zoomableDiagram: zoomableDiagram2, md: md2, persist: persist2, refreshAll } = app2;
+    let addSeq = 0;
+    const newId = (kind) => `user-${kind}-${++addSeq}-${Math.floor(performance.now())}`;
+    const blankCard = (kind) => {
+      const base = { id: newId(kind), userAdded: true, title: "", thread: [] };
+      if (kind === "decision") {
+        base.status = "needs-you";
+        base.options = [];
+      }
+      if (kind === "step") base.kind = "step";
+      return base;
+    };
+    const isEmptyDraft = (c) => {
+      if ((c.title || "").trim()) return false;
+      const fields = [
+        "intent",
+        "boundary",
+        "building",
+        "summary",
+        "description",
+        "files",
+        "test"
+      ];
+      if (fields.some((f) => (c[f] || "").trim())) return false;
+      if ((c.options || []).length) return false;
+      const v = c.verify;
+      if (v && (v.method || v.command || v.expected)) return false;
+      return true;
+    };
+    const syncAddBtn = (rec) => {
+      const arr = store2.added[rec.bucket];
+      const trailing = arr[arr.length - 1];
+      const openBlank = trailing && isEmptyDraft(trailing);
+      rec.el.textContent = `${openBlank ? "−" : "+"} Add ${rec.label}`;
+      rec.el.classList.toggle("active", Boolean(openBlank));
+      rec.openBlank = openBlank;
+    };
+    const refreshAddBtns = () => store2.addBtns.forEach(syncAddBtn);
+    const addBtn = (kind, bucket, container, label) => {
+      const b = el2("button", "add-card");
+      b.type = "button";
+      const rec = { el: b, bucket, label, openBlank: false };
+      store2.addBtns.push(rec);
+      syncAddBtn(rec);
+      b.addEventListener("click", () => {
+        const arr = store2.added[bucket];
+        if (rec.openBlank) {
+          arr.pop();
+          persist2();
+          renderSections();
+          return;
+        }
+        const card = blankCard(kind);
+        arr.push(card);
+        persist2();
         renderSections();
-        return;
-      }
-      const card = blankCard(kind);
-      arr.push(card);
-      persist();
-      renderSections();
-      const node = document.querySelector(`.card[data-id="${card.id}"]`);
-      if (node) {
-        node.classList.add("open");
-        node.scrollIntoView({ behavior: "smooth", block: "center" });
-        const t = node.querySelector(".authoring .ainput");
-        if (t) t.focus();
-      }
-    });
-    container.appendChild(b);
-  };
-
-  // ---------- drag-to-reorder: priority order, per section, persisted ----------
-  // answers[id].order is the user's priority index within its section; cards
-  // sort by it on load and the order rides back to the agent with the round.
-  const DRAG_CONTAINERS = ["intents", "mockDecisions", "decisions"];
-  let dragging = null;
-  const applySavedOrder = (cid) => {
-    const c = document.getElementById(cid);
-    if (!c) return;
-    [...c.children]
-      .sort((a, b) => {
-        const oa = (answers[a.dataset.id] || {}).order;
-        const ob = (answers[b.dataset.id] || {}).order;
+        const node = document.querySelector(`.card[data-id="${card.id}"]`);
+        if (node) {
+          node.classList.add("open");
+          node.scrollIntoView({ behavior: "smooth", block: "center" });
+          const t = node.querySelector(".authoring .ainput");
+          if (t) t.focus();
+        }
+      });
+      container.appendChild(b);
+    };
+    const DRAG_CONTAINERS = ["intents", "mockDecisions", "decisions"];
+    let dragging = null;
+    const applySavedOrder = (cid) => {
+      const c = document.getElementById(cid);
+      if (!c) return;
+      [...c.children].sort((a, b) => {
+        const oa = (store2.answers[a.dataset.id] || {}).order;
+        const ob = (store2.answers[b.dataset.id] || {}).order;
         return (oa ?? 1e9) - (ob ?? 1e9);
-      })
-      .forEach(el => c.appendChild(el));
-  };
-  const saveOrder = (cid) => {
-    const c = document.getElementById(cid);
-    [...c.children].forEach((el, idx) => { ans(el.dataset.id).order = idx; });
-    persist();
-  };
-  const setupDrag = (cid) => {
-    const c = document.getElementById(cid);
-    if (!c) return;
-    applySavedOrder(cid);
-    c.querySelectorAll(".card").forEach(card => {
-      const grip = card.querySelector(".grip");
-      if (!grip) return;
-      grip.addEventListener("mousedown", () => { card.draggable = true; });
-      card.addEventListener("dragstart", e => {
-        dragging = card; card.classList.add("drag");
-        e.dataTransfer.effectAllowed = "move";
+      }).forEach((e) => c.appendChild(e));
+    };
+    const saveOrder = (cid) => {
+      const c = document.getElementById(cid);
+      [...c.children].forEach((e, idx) => {
+        store2.ans(e.dataset.id).order = idx;
       });
-      card.addEventListener("dragend", () => {
-        card.classList.remove("drag"); card.draggable = false; dragging = null;
-        saveOrder(cid);
+      persist2();
+    };
+    const setupDrag = (cid) => {
+      const c = document.getElementById(cid);
+      if (!c) return;
+      applySavedOrder(cid);
+      c.querySelectorAll(".card").forEach((card) => {
+        const grip = card.querySelector(".grip");
+        if (!grip) return;
+        grip.addEventListener("mousedown", () => {
+          card.draggable = true;
+        });
+        card.addEventListener("dragstart", (e) => {
+          dragging = card;
+          card.classList.add("drag");
+          e.dataTransfer.effectAllowed = "move";
+        });
+        card.addEventListener("dragend", () => {
+          card.classList.remove("drag");
+          card.draggable = false;
+          dragging = null;
+          saveOrder(cid);
+        });
       });
-    });
-    if (c.dataset.dndBound) return;   // attach the container listener only once
-    c.dataset.dndBound = "1";
-    c.addEventListener("dragover", e => {
-      e.preventDefault();
-      if (!dragging || dragging.parentElement !== c) return;
-      const after = [...c.querySelectorAll(".card:not(.drag)")].find(card => {
-        const r = card.getBoundingClientRect();
-        return e.clientY < r.top + r.height / 2;
+      if (c.dataset.dndBound) return;
+      c.dataset.dndBound = "1";
+      c.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        if (!dragging || dragging.parentElement !== c) return;
+        const after = [...c.querySelectorAll(".card:not(.drag)")].find((card) => {
+          const r = card.getBoundingClientRect();
+          return e.clientY < r.top + r.height / 2;
+        });
+        if (after) c.insertBefore(dragging, after);
+        else c.appendChild(dragging);
       });
-      if (after) c.insertBefore(dragging, after);
-      else c.appendChild(dragging);
-    });
-  };
-
-  // ---------- (re)render everything from the current PLAN ----------
-  // Wrapped in a function so a live SSE `plan-updated` can rebuild in place.
-  // The user's inputs live in `answers` (untouched here), so picks/typed text
-  // survive a rebuild; open-state + scroll are captured/restored by reconcile().
-  const SECTION_IDS = ["boundaries", "intents", "mockDecisions", "decisions",
-                       "steps", "fvRows"];
-  const renderSections = () => {
-    cards.length = 0;
-    addBtns.length = 0;
-    SECTION_IDS.forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = ""; });
-
-  // ---------- render header ----------
-  document.getElementById("title").textContent = PLAN.title || "Plan";
-  document.getElementById("metaline").textContent =
-    [PLAN.date, "round " + ROUND, PLAN.task].filter(Boolean).join(" · ");
-  const summaryEl = document.getElementById("summary");
-  summaryEl.innerHTML = PLAN.summary ? md(PLAN.summary) : "";
-  // gradual reveal: clamp a long lead behind a "read more" so it doesn't dominate the fold
-  if (PLAN.summary) {
-    const moreBtn = el("button", "lead-more");
-    moreBtn.type = "button";
-    summaryEl.after(moreBtn);
-    summaryEl.classList.add("clampable");
-    requestAnimationFrame(() => {
-      // overflows the clamp height? then offer expand; otherwise un-clamp (it fits)
-      if (summaryEl.scrollHeight > summaryEl.clientHeight + 8) {
-        moreBtn.classList.add("show");
-        moreBtn.textContent = "Read the full summary ▾";
-        moreBtn.onclick = () => {
-          const open = summaryEl.classList.toggle("open");
-          moreBtn.textContent = open ? "Show less ▴" : "Read the full summary ▾";
-        };
-      } else {
-        summaryEl.classList.remove("clampable");
+    };
+    const SECTION_IDS = [
+      "boundaries",
+      "intents",
+      "mockDecisions",
+      "decisions",
+      "steps",
+      "fvRows"
+    ];
+    const renderSections = () => {
+      const PLAN2 = store2.plan;
+      store2.cards.length = 0;
+      store2.addBtns.length = 0;
+      SECTION_IDS.forEach((id) => {
+        const e = document.getElementById(id);
+        if (e) e.innerHTML = "";
+      });
+      document.getElementById("title").textContent = PLAN2.title || "Plan";
+      document.getElementById("metaline").textContent = [PLAN2.date, "round " + store2.round, PLAN2.task].filter(Boolean).join(" · ");
+      const summaryEl = document.getElementById("summary");
+      summaryEl.innerHTML = PLAN2.summary ? md2(PLAN2.summary) : "";
+      if (PLAN2.summary) {
+        const moreBtn = el2("button", "lead-more");
+        moreBtn.type = "button";
+        summaryEl.after(moreBtn);
+        summaryEl.classList.add("clampable");
+        requestAnimationFrame(() => {
+          if (summaryEl.scrollHeight > summaryEl.clientHeight + 8) {
+            moreBtn.classList.add("show");
+            moreBtn.textContent = "Read the full summary ▾";
+            moreBtn.onclick = () => {
+              const open = summaryEl.classList.toggle("open");
+              moreBtn.textContent = open ? "Show less ▴" : "Read the full summary ▾";
+            };
+          } else {
+            summaryEl.classList.remove("clampable");
+          }
+        });
       }
-    });
-  }
-  document.getElementById("goalBox").classList.toggle("show", Boolean(PLAN.goal));
-  if (PLAN.goal) document.getElementById("goalText").innerHTML = md(PLAN.goal);
-  document.getElementById("followupBanner").classList.toggle("show", Boolean(PLAN.followUp));
-  document.getElementById("finalize").textContent =
-    PLAN.followUp ? "Resume build ▶" : "Finalize plan";
-
-  // ---------- render sections ----------
-  // each section merges the agent's cards with the user's added cards, and
-  // always shows (so its "+ Add" button is reachable even when empty).
-  const boundaries = [...(PLAN.boundaries || []), ...added.boundaries];
-  document.getElementById("boundariesWrap").style.display = "";
-  boundaries.forEach((d, i) =>
-    buildCard(d, i, "boundary", document.getElementById("boundaries")));
-  addBtn("boundary", "boundaries", document.getElementById("boundaries"), "boundary");
-
-  const intents = [...(PLAN.intents || []), ...added.intents];
-  document.getElementById("intentsWrap").style.display = "";
-  intents.forEach((d, i) =>
-    buildCard(d, i, "intent", document.getElementById("intents")));
-  addBtn("intent", "intents", document.getElementById("intents"), "intent");
-
-  // decisions with mock options get their own prominent section — for UI work
-  // the mock IS the decision, it must not hide in the generic list. User-added
-  // decisions are plain (no mocks), so they join the plain-decisions list.
-  const isMockDecision = d => (d.options || []).some(o =>
-    o && typeof o === "object" && (o.svg || o.html));
-  const mockDecisions = (PLAN.decisions || []).filter(isMockDecision);
-  const plainDecisions = [...(PLAN.decisions || []).filter(d => !isMockDecision(d)),
-                          ...added.decisions];
-  if (mockDecisions.length) {
-    document.getElementById("mocksWrap").style.display = "";
-    mockDecisions.forEach((d, i) =>
-      buildCard(d, i, "decision", document.getElementById("mockDecisions")));
-  } else {
-    document.getElementById("mocksWrap").style.display = "none";
-  }
-  document.getElementById("decisionsWrap").style.display = "";
-  plainDecisions.forEach((d, i) =>
-    buildCard(d, i, "decision", document.getElementById("decisions")));
-  addBtn("decision", "decisions", document.getElementById("decisions"), "decision");
-
-  DRAG_CONTAINERS.forEach(setupDrag);
-
-  document.getElementById("diagramWrap").style.display = PLAN.diagramSvg ? "" : "none";
-  if (PLAN.diagramSvg) {
-    const dg = document.getElementById("diagram");
-    dg.innerHTML =
-      `<svg viewBox="${PLAN.diagramViewBox || '0 0 720 240'}" role="img" aria-label="plan diagram">
+      document.getElementById("goalBox").classList.toggle("show", Boolean(PLAN2.goal));
+      if (PLAN2.goal) document.getElementById("goalText").innerHTML = md2(PLAN2.goal);
+      document.getElementById("followupBanner").classList.toggle("show", Boolean(PLAN2.followUp));
+      document.getElementById("finalize").textContent = PLAN2.followUp ? "Resume build ▶" : "Finalize plan";
+      const boundaries = [...PLAN2.boundaries || [], ...store2.added.boundaries];
+      document.getElementById("boundariesWrap").style.display = "";
+      boundaries.forEach((d, i) => buildCard(app2, d, i, "boundary", document.getElementById("boundaries")));
+      addBtn("boundary", "boundaries", document.getElementById("boundaries"), "boundary");
+      const intents = [...PLAN2.intents || [], ...store2.added.intents];
+      document.getElementById("intentsWrap").style.display = "";
+      intents.forEach((d, i) => buildCard(app2, d, i, "intent", document.getElementById("intents")));
+      addBtn("intent", "intents", document.getElementById("intents"), "intent");
+      const isMockDecision = (d) => (d.options || []).some((o) => o && typeof o === "object" && (o.svg || o.html));
+      const mockDecisions = (PLAN2.decisions || []).filter(isMockDecision);
+      const plainDecisions = [
+        ...(PLAN2.decisions || []).filter((d) => !isMockDecision(d)),
+        ...store2.added.decisions
+      ];
+      if (mockDecisions.length) {
+        document.getElementById("mocksWrap").style.display = "";
+        mockDecisions.forEach((d, i) => buildCard(app2, d, i, "decision", document.getElementById("mockDecisions")));
+      } else {
+        document.getElementById("mocksWrap").style.display = "none";
+      }
+      document.getElementById("decisionsWrap").style.display = "";
+      plainDecisions.forEach((d, i) => buildCard(app2, d, i, "decision", document.getElementById("decisions")));
+      addBtn("decision", "decisions", document.getElementById("decisions"), "decision");
+      DRAG_CONTAINERS.forEach(setupDrag);
+      document.getElementById("diagramWrap").style.display = PLAN2.diagramSvg ? "" : "none";
+      if (PLAN2.diagramSvg) {
+        const dg = document.getElementById("diagram");
+        dg.innerHTML = `<svg viewBox="${PLAN2.diagramViewBox || "0 0 720 240"}" role="img" aria-label="plan diagram">
          <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"
            markerHeight="7" orient="auto-start-reverse">
            <path d="M0,0 L10,5 L0,10 z" fill="#9aa3b2"/></marker></defs>
-         ${PLAN.diagramSvg}</svg>`;
-    zoomableDiagram(dg, "Architecture & flow");
-  }
-  // steps: every step — agent's or user-added — renders as an editable card,
-  // so the user can rewrite or delete (✕) any of them. The section always
-  // shows so its "+ Add step" is reachable. Agent steps get a stable id if
-  // they lack one (so strike/edit state keys correctly).
-  document.getElementById("stepsWrap").style.display = "";
-  const stepsWrap = document.getElementById("steps");
-  (PLAN.steps || []).forEach((s, i) => { if (!s.id) s.id = `step-${i}`; s.kind = "step"; });
-  // walk PLAN.steps in order, swapping each edited original for its editable
-  // copy (so an edited step keeps its position, not jumps to the end). Steps
-  // the user added from scratch (not derived from a PLAN step) append after.
-  const editedById = {};
-  const fromPlan = new Set((PLAN.steps || []).map(s => s.id));
-  added.steps.forEach(s => { if (fromPlan.has(s.id)) editedById[s.id] = s; });
-  const steps = [
-    ...(PLAN.steps || []).map(s => editedById[s.id] || s),
-    ...added.steps.filter(s => !fromPlan.has(s.id)),
-  ];
-  steps.forEach((s, i) => buildCard(s, i, "step", stepsWrap));
-  addBtn("step", "steps", stepsWrap, "step");
-  // ---------- final verify ("finish line") — editable rows ----------
-  // The section always shows so its "+ Add verify row" is reachable. fvState
-  // is the editable working copy; first render seeds it from PLAN.finalVerify.
-  if (fvState === null) {
-    fvState = (PLAN.finalVerify || []).map(v => ({ ...v }));
-  }
-  document.getElementById("finalVerifyWrap").style.display = "";
-  const tb = document.getElementById("fvRows");
-  // intent options for the dropdown (existing + user-added intents)
-  const intentOpts = [...(PLAN.intents || []), ...added.intents];
-  const fvInput = (val, cls, onInput, placeholder) => {
-    const inp = el("input"); inp.type = "text";
-    inp.className = "ainput fv-in" + (cls ? " " + cls : "");
-    inp.value = val || ""; inp.placeholder = placeholder || "";
-    inp.addEventListener("input", () => { onInput(inp.value); persist(); });
-    return inp;
-  };
-  fvState.forEach((v, ri) => {
-    const tr = el("tr");
-    // intent cell — dropdown of intents, plus free entry fallback
-    const itd = el("td");
-    const sel = el("select"); sel.className = "ainput fv-in";
-    const blank = el("option", null, "— intent —"); blank.value = ""; sel.appendChild(blank);
-    intentOpts.forEach(it => {
-      const o = el("option", null, titleOf(it)); o.value = it.id; sel.appendChild(o);
-    });
-    // if the row's intent isn't a known id, keep it as a literal option
-    if (v.intent && !intentOpts.some(it => it.id === v.intent)) {
-      const o = el("option", null, v.intent); o.value = v.intent; sel.appendChild(o);
-    }
-    sel.value = v.intent || "";
-    sel.addEventListener("change", () => { v.intent = sel.value; persist(); });
-    itd.appendChild(sel); tr.appendChild(itd);
-    // method / command / expected — editable
-    const mtd = el("td"); mtd.appendChild(fvInput(v.method, null, x => v.method = x, "e2e / unit")); tr.appendChild(mtd);
-    const ctd = el("td"); ctd.appendChild(fvInput(v.command, "cmd", x => v.command = x, "exact command")); tr.appendChild(ctd);
-    const etd = el("td"); etd.appendChild(fvInput(v.expected, null, x => v.expected = x, "observable result")); tr.appendChild(etd);
-    // delete row
-    const dtd = el("td", "fv-del-cell");
-    const del = el("button", "icon-btn drop", "✕");
-    del.type = "button"; del.title = "Delete this verify row";
-    del.addEventListener("click", () => { fvState.splice(ri, 1); persist(); renderSections(); });
-    dtd.appendChild(del); tr.appendChild(dtd);
-    tb.appendChild(tr);
-  });
-  // "+ Add verify row"
-  const addRow = el("button", "add-card", "+ Add verify row");
-  addRow.type = "button";
-  addRow.addEventListener("click", () => {
-    fvState.push({ intent: "", method: "", command: "", expected: "" });
-    persist(); renderSections();
-    const rows = tb.querySelectorAll("tr");
-    const last = rows[rows.length - 1];
-    if (last) { last.scrollIntoView({ behavior: "smooth", block: "center" });
-      const f = last.querySelector("select"); if (f) f.focus(); }
-  });
-  document.getElementById("fvAddWrap").innerHTML = "";
-  document.getElementById("fvAddWrap").appendChild(addRow);
-    DRAG_CONTAINERS.forEach(setupDrag);
-    refreshAll();
-  };  // end renderSections
-  // follow-up rounds: settled intents/boundaries are locked and must not
-  // re-gate Resume — only explicitly needs-you cards do
-  const needsYouCards = () => cards.filter(c =>
-    PLAN.followUp
-      ? c.data.status === "needs-you"
-      : c.kind === "intent" || c.kind === "boundary" || c.data.status === "needs-you");
-
-  const refreshBar = () => {
-    const total = cards.length;
-    const answered = cards.filter(c => satisfied(c.id)).length;
-    const questions = cards.filter(c => hasQuestion(c.id)).length;
-    const pct = total ? Math.round((answered / total) * 100) : 100;
-    document.getElementById("progfill").style.width = pct + "%";
-    document.getElementById("progtxt").textContent =
-      `${answered} / ${total} cards answered` +
-      (questions ? ` · ${questions} question${questions > 1 ? "s" : ""} for the agent` : "");
-
-    const anyInput = cards.some(c => hasInput(c.id)) ||
-      agentActions.reexplore || agentActions.note.trim() !== "";
-    const blockers = needsYouCards().filter(c => !satisfied(c.id));
-    document.getElementById("sendRound").disabled = !anyInput;
-    document.getElementById("finalize").disabled = blockers.length > 0 || questions > 0;
-    document.getElementById("substatus").textContent =
-      questions ? `💬 ${questions} open question${questions > 1 ? "s" : ""} — send a round to get the answers`
-      : blockers.length ? `🏁 ${blockers.length} required card${blockers.length > 1 ? "s" : ""} to go before Finalize unlocks (buttons or your own words)`
-      : "🏁 All clear — Finalize is the move unless something still nags. Another round is one click away.";
-
-    // "Show what's left" — only worth offering once a few cards are done.
-    // While the filter is on, label it with how many remain so it doubles as a counter.
-    const left = total - answered;
-    const toggle = document.getElementById("leftToggle");
-    toggle.classList.toggle("show", answered >= 3 && left > 0);
-    const filtering = document.body.classList.contains("hide-done");
-    toggle.classList.toggle("on", filtering);
-    toggle.textContent = filtering ? `Showing ${left} left · show all` : "Show what's left";
-    // if filtering emptied everything (all done), drop back to show-all so the
-    // deck never looks blank
-    if (filtering && left === 0) { document.body.classList.remove("hide-done"); }
+         ${PLAN2.diagramSvg}</svg>`;
+        zoomableDiagram2(dg, "Architecture & flow");
+      }
+      document.getElementById("stepsWrap").style.display = "";
+      const stepsWrap = document.getElementById("steps");
+      (PLAN2.steps || []).forEach((s, i) => {
+        if (!s.id) s.id = `step-${i}`;
+        s.kind = "step";
+      });
+      const editedById = {};
+      const fromPlan = new Set((PLAN2.steps || []).map((s) => s.id));
+      store2.added.steps.forEach((s) => {
+        if (fromPlan.has(s.id)) editedById[s.id] = s;
+      });
+      const steps = [
+        ...(PLAN2.steps || []).map((s) => editedById[s.id] || s),
+        ...store2.added.steps.filter((s) => !fromPlan.has(s.id))
+      ];
+      steps.forEach((s, i) => buildCard(app2, s, i, "step", stepsWrap));
+      addBtn("step", "steps", stepsWrap, "step");
+      if (store2.fvState === null) {
+        store2.fvState = (PLAN2.finalVerify || []).map((v) => ({ ...v }));
+      }
+      document.getElementById("finalVerifyWrap").style.display = "";
+      const tb = document.getElementById("fvRows");
+      const intentOpts = [...PLAN2.intents || [], ...store2.added.intents];
+      const fvInput = (val, cls, onInput, placeholder) => {
+        const inp = el2("input");
+        inp.type = "text";
+        inp.className = "ainput fv-in" + (cls ? " " + cls : "");
+        inp.value = val || "";
+        inp.placeholder = placeholder || "";
+        inp.addEventListener("input", () => {
+          onInput(inp.value);
+          persist2();
+        });
+        return inp;
+      };
+      store2.fvState.forEach((v, ri) => {
+        const tr = el2("tr");
+        const itd = el2("td");
+        const sel = el2("select");
+        sel.className = "ainput fv-in";
+        const blank = el2("option", null, "— intent —");
+        blank.value = "";
+        sel.appendChild(blank);
+        intentOpts.forEach((it) => {
+          const o = el2("option", null, titleOf(it));
+          o.value = it.id;
+          sel.appendChild(o);
+        });
+        if (v.intent && !intentOpts.some((it) => it.id === v.intent)) {
+          const o = el2("option", null, v.intent);
+          o.value = v.intent;
+          sel.appendChild(o);
+        }
+        sel.value = v.intent || "";
+        sel.addEventListener("change", () => {
+          v.intent = sel.value;
+          persist2();
+        });
+        itd.appendChild(sel);
+        tr.appendChild(itd);
+        const mtd = el2("td");
+        mtd.appendChild(fvInput(v.method, null, (x) => v.method = x, "e2e / unit"));
+        tr.appendChild(mtd);
+        const ctd = el2("td");
+        ctd.appendChild(fvInput(v.command, "cmd", (x) => v.command = x, "exact command"));
+        tr.appendChild(ctd);
+        const etd = el2("td");
+        etd.appendChild(fvInput(v.expected, null, (x) => v.expected = x, "observable result"));
+        tr.appendChild(etd);
+        const dtd = el2("td", "fv-del-cell");
+        const del = el2("button", "icon-btn drop", "✕");
+        del.type = "button";
+        del.title = "Delete this verify row";
+        del.addEventListener("click", () => {
+          store2.fvState.splice(ri, 1);
+          persist2();
+          renderSections();
+        });
+        dtd.appendChild(del);
+        tr.appendChild(dtd);
+        tb.appendChild(tr);
+      });
+      const addRow = el2("button", "add-card", "+ Add verify row");
+      addRow.type = "button";
+      addRow.addEventListener("click", () => {
+        store2.fvState.push({ intent: "", method: "", command: "", expected: "" });
+        persist2();
+        renderSections();
+        const rows = tb.querySelectorAll("tr");
+        const last = rows[rows.length - 1];
+        if (last) {
+          last.scrollIntoView({ behavior: "smooth", block: "center" });
+          const f = last.querySelector("select");
+          if (f) f.focus();
+        }
+      });
+      document.getElementById("fvAddWrap").innerHTML = "";
+      document.getElementById("fvAddWrap").appendChild(addRow);
+      DRAG_CONTAINERS.forEach(setupDrag);
+      refreshAll();
+    };
+    app2.renderSections = renderSections;
+    app2.refreshAddBtns = refreshAddBtns;
+    return { renderSections, refreshAddBtns, setupDrag };
   };
 
-  document.getElementById("leftToggle").addEventListener("click", () => {
-    document.body.classList.toggle("hide-done");
-    refreshBar();
-  });
-
-  document.getElementById("expandAll").addEventListener("click", () => {
-    const cardEls = document.querySelectorAll(".card");
-    const anyClosed = [...cardEls].some(c => !c.classList.contains("open"));
-    cardEls.forEach(c => c.classList.toggle("open", anyClosed));
-    document.getElementById("expandAll").textContent = anyClosed ? "Collapse all" : "Expand all";
-  });
-
-  // --- next-round agent actions panel ---
-  const reexploreBtn = document.getElementById("reexplore");
-  const agentNoteTa = document.getElementById("agentNote");
-  reexploreBtn.classList.toggle("sel", agentActions.reexplore);
-  agentNoteTa.value = agentActions.note || "";
-  reexploreBtn.addEventListener("click", () => {
-    agentActions.reexplore = !agentActions.reexplore;
-    reexploreBtn.classList.toggle("sel", agentActions.reexplore);
-    touched();
-  });
-  agentNoteTa.addEventListener("input", () => {
-    agentActions.note = agentNoteTa.value;
-    touched();
-  });
-
-  const payload = action => {
-    // emit cards in the user's current on-screen priority order (top = highest)
-    const domOrder = [...document.querySelectorAll(".card")].map(el => el.dataset.id);
-    const ordered = [...cards].sort(
-      (a, b) => domOrder.indexOf(a.id) - domOrder.indexOf(b.id));
+  // src/payload.js
+  var buildPayload = (store2, action, domOrderIds) => {
+    const ordered = [...store2.cards].sort(
+      (a, b) => domOrderIds.indexOf(a.id) - domOrderIds.indexOf(b.id)
+    );
     return {
       action,
-      round: ROUND,
-      agentActions: { reexplore: agentActions.reexplore, note: agentActions.note.trim() },
+      round: store2.round,
+      agentActions: {
+        reexplore: store2.agentActions.reexplore,
+        note: store2.agentActions.note.trim()
+      },
       // struck-out cards are removed from the plan — drop them from the round
       // entirely (agent's cards become "absent = removed"; user-added cards
       // never reach the agent at all)
-      cards: ordered.filter(c => !dismissed(c.id)).map((c, priority) => {
-        const a = answers[c.id] || {};
+      cards: ordered.filter((c) => !store2.dismissed(c.id)).map((c, priority) => {
+        const a = store2.answers[c.id] || {};
         const base = {
-          id: c.id, kind: c.kind, title: titleOf(c.data),
+          id: c.id,
+          kind: c.kind,
+          title: titleOf(c.data),
           status: c.data.status || null,
-          priority,                               // 0 = top of its section
+          priority,
+          // 0 = top of its section
           choice: a.choice || null,
           answer: (a.answer || "").trim(),
           question: (a.question || "").trim(),
           edit: (a.edit || "").trim() || null
         };
-        // cards the user authored in the browser carry their full draft so the
-        // agent can validate/complete them next round
-        if (c.data.userAdded) { base.userAdded = true; base.draft = c.data; }
-        // step cards are editable in place — always carry the current field
-        // state so the agent keeps the user's wording (their version is
-        // authoritative). userEdited flags an agent step the user changed.
+        if (c.data.userAdded) {
+          base.userAdded = true;
+          base.draft = c.data;
+        }
         if (c.kind === "step") {
           base.draft = c.data;
           if (!c.data.userAdded) base.userEdited = true;
         }
-        // answers to the agent's grill/clarifying questions on this card, paired
-        // with the question text so the agent reads them in context
         if (c.data.agentQuestions && c.data.agentQuestions.length) {
-          const g = (a.grill || {});
+          const g = a.grill || {};
           base.grill = c.data.agentQuestions.map((gq, qi) => {
             const qid = (typeof gq === "object" ? gq.id : null) || `q${qi}`;
             const qtext = typeof gq === "object" ? gq.q : gq;
@@ -1822,187 +1758,279 @@
         return base;
       }),
       // the user's edited finish-line rows (authoritative); empty rows dropped
-      finalVerify: (fvState || []).filter(v =>
-        [v.intent, v.method, v.command, v.expected].some(x => (x || "").trim()))
+      finalVerify: (store2.fvState || []).filter((v) => [v.intent, v.method, v.command, v.expected].some((x) => (x || "").trim()))
     };
   };
 
-  const ship = async (action) => {
-    const send = document.getElementById("sendRound");
-    const fin = document.getElementById("finalize");
-    send.disabled = true; fin.disabled = true;
-    const btn = action === "finalize" ? fin : send;
-    const btnLabel = btn.textContent;
-    btn.textContent = "Sending…";
-    let delivered = false;
-    try {
-      const r = await fetch("/submit", { method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload(action)) });
-      delivered = r.ok;
-    } catch (e) { delivered = false; }
-    if (!delivered) {
-      // the server is gone (likely timed out) — do NOT pretend it was sent;
-      // answers are safe in localStorage + the last autosave
-      btn.textContent = btnLabel;
-      send.disabled = false; fin.disabled = false;
-      refreshBar();
-      document.getElementById("substatus").textContent =
-        "⚠ Could not reach the agent — the deck server may have expired. "
-        + "Your answers are saved; re-run the deck from the terminal and they will reload.";
-      saveEl().textContent = "Saved locally only"; saveEl().className = "savestate warn";
-      return;
-    }
-    // sent successfully — show the done page FIRST so there is always a clear
-    // confirmation, then attempt to close the tab. window.close() only works on
-    // script-opened tabs (it is a silent no-op on a tab the user opened by URL,
-    // e.g. over the tunnel on a phone) — so the done page is the real signal,
-    // not the close.
-    document.getElementById("wrap")
-      .querySelectorAll("header,.lead,.lead-more,.followup,.goal,.howto-d,.progress,#boundariesWrap,#intentsWrap,#mocksWrap,#decisionsWrap,#diagramWrap,#stepsWrap,#finalVerifyWrap,#nextRoundWrap")
-      .forEach(n => n.style.display = "none");
-    document.getElementById("doneBig").textContent = action === "finalize"
-      ? (PLAN.followUp ? "🎉 Follow-ups answered — the build resumes."
-                       : "🎉 Plan finalized — handed back to the agent.")
-      : "✓ Round sent to the agent.";
-    document.getElementById("doneSmall").textContent = action === "finalize"
-      ? "All saved. The agent has your plan and is taking it from here — you can close this tab."
-      : "All saved. The agent is working on your round — you can close this tab.";
-    document.getElementById("done").classList.add("show");
-    document.getElementById("submitbar").style.display = "none";
-    window.scrollTo(0, 0);
-    // best-effort auto-close for script-opened tabs; harmless no-op otherwise
-    setTimeout(() => { try { window.close(); } catch (e) {} }, 400);
-  };
-  document.getElementById("sendRound").addEventListener("click", () => ship("send-round"));
-  document.getElementById("finalize").addEventListener("click", () => ship("finalize"));
-
-  // ---------- live mode: reconcile in place from SSE plan-updated events ----------
-  // pendingAsk (hoisted above) tracks cards awaiting a live reply: cardId ->
-  // thread length when the message was sent. When the thread grows past that,
-  // the agent has replied.
-  const threadLen = (cid) => {
-    const d = byId(cid);
-    return d && d.thread ? d.thread.length : 0;
-  };
-
-  const reconcile = (newPlan) => {
-    // capture volatile UI state so a rebuild is invisible to the user
-    const openIds = new Set([...document.querySelectorAll(".card.open")].map(c => c.dataset.id));
-    const scrollY = window.scrollY;
-    const active = document.activeElement;
-    const focusId = active && active.closest ? (active.closest(".card") || {}).dataset?.id : null;
-    const focusSel = active && active.classList && active.classList.contains("chat-input") ? "chat"
-      : active && active.tagName === "TEXTAREA" ? "answer" : null;
-
-    PLAN = newPlan;
-    ROUND = PLAN.round || ROUND;
-    renderSections();
-
-    // restore open-state; auto-open any card whose thread just grew (answer arrived)
-    cards.forEach(c => {
-      if (openIds.has(c.id)) c.el.classList.add("open");
-      const p = pendingAsk[c.id];
-      if (p != null && threadLen(c.id) > p.len) {
-        c.el.classList.add("open");           // reveal the fresh answer
-        delete pendingAsk[c.id];
+  // src/live.js
+  var createLive = (app2) => {
+    const { store: store2, el: el2, mdEl: mdEl2 } = app2;
+    const needsYouCards = () => store2.cards.filter((c) => store2.plan.followUp ? c.data.status === "needs-you" : c.kind === "intent" || c.kind === "boundary" || c.data.status === "needs-you");
+    const refreshBar = () => {
+      const total = store2.cards.length;
+      const answered = store2.cards.filter((c) => store2.satisfied(c.id)).length;
+      const questions = store2.cards.filter((c) => store2.hasQuestion(c.id)).length;
+      const pct = total ? Math.round(answered / total * 100) : 100;
+      document.getElementById("progfill").style.width = pct + "%";
+      document.getElementById("progtxt").textContent = `${answered} / ${total} cards answered` + (questions ? ` · ${questions} question${questions > 1 ? "s" : ""} for the agent` : "");
+      const anyInput = store2.cards.some((c) => store2.hasInput(c.id)) || store2.agentActions.reexplore || store2.agentActions.note.trim() !== "";
+      const blockers = needsYouCards().filter((c) => !store2.satisfied(c.id));
+      document.getElementById("sendRound").disabled = !anyInput;
+      document.getElementById("finalize").disabled = blockers.length > 0 || questions > 0;
+      document.getElementById("substatus").textContent = questions ? `💬 ${questions} open question${questions > 1 ? "s" : ""} — send a round to get the answers` : blockers.length ? `🏁 ${blockers.length} required card${blockers.length > 1 ? "s" : ""} to go before Finalize unlocks (buttons or your own words)` : "🏁 All clear — Finalize is the move unless something still nags. Another round is one click away.";
+      const left = total - answered;
+      const toggle = document.getElementById("leftToggle");
+      toggle.classList.toggle("show", answered >= 3 && left > 0);
+      const filtering = document.body.classList.contains("hide-done");
+      toggle.classList.toggle("on", filtering);
+      toggle.textContent = filtering ? `Showing ${left} left · show all` : "Show what's left";
+      if (filtering && left === 0) {
+        document.body.classList.remove("hide-done");
       }
-      if (pendingAsk[c.id] != null) c.el.classList.add("awaiting");  // still thinking
+    };
+    const refreshAll = () => {
+      store2.cards.forEach((c) => c.refresh());
+      refreshBar();
+    };
+    app2.refreshBar = refreshBar;
+    app2.refreshAll = refreshAll;
+    document.getElementById("leftToggle").addEventListener("click", () => {
+      document.body.classList.toggle("hide-done");
+      refreshBar();
     });
-    // re-show any pending user message + awaiting bubble the rebuild wiped,
-    // until the agent's reply grows the real thread past where we asked
-    cards.forEach(c => {
-      const p = pendingAsk[c.id];
-      if (p == null || typeof p !== "object") return;
-      if (threadLen(c.id) > p.len) return;        // reply already landed
-      const chat = c.el.querySelector(".chat-blk");
-      if (!chat) return;
-      const th = chat.querySelector(".thread");
-      const mine = el("div", "msg");
-      mine.appendChild(el("div", "who user", "You"));
-      mine.appendChild(mdEl(null, p.text));
-      th.style.display = ""; th.appendChild(mine);
-      const aw = chat.querySelector(".chat-await");
-      // restart the honest-wait countdown from the rebuild (don't reset to 0s
-      // each reconcile — only (re)start if it isn't already counting)
-      if (aw && aw._startAwait) aw._startAwait();
-      else if (aw) aw.style.display = "";
+    document.getElementById("expandAll").addEventListener("click", () => {
+      const cardEls = document.querySelectorAll(".card");
+      const anyClosed = [...cardEls].some((c) => !c.classList.contains("open"));
+      cardEls.forEach((c) => c.classList.toggle("open", anyClosed));
+      document.getElementById("expandAll").textContent = anyClosed ? "Collapse all" : "Expand all";
     });
-    // restore focus where possible
-    if (focusId && focusSel) {
-      const card = document.querySelector(`.card[data-id="${focusId}"]`);
-      const ta = card && (focusSel === "chat" ? card.querySelector(".chat-input")
-                                              : card.querySelector(".card-body textarea"));
-      if (ta) { ta.focus(); }
-    }
-    window.scrollTo(0, scrollY);
-    refreshAll();
-  };
-
-  const liveDot = document.getElementById("liveDot");
-  const setLive = (state) => {
-    liveDot.className = "live-dot " + state;     // connected | reconnecting
-    liveDot.title = state === "connected" ? "Live — answers update in place"
-                                          : "Reconnecting to the live stream…";
-  };
-  const startLive = () => {
-    let es;
-    try { es = new EventSource("/events"); }
-    catch (e) { return; }                        // not in live mode / no server
-    es.addEventListener("plan-updated", ev => {
+    const reexploreBtn = document.getElementById("reexplore");
+    const agentNoteTa = document.getElementById("agentNote");
+    reexploreBtn.classList.toggle("sel", store2.agentActions.reexplore);
+    agentNoteTa.value = store2.agentActions.note || "";
+    reexploreBtn.addEventListener("click", () => {
+      store2.agentActions.reexplore = !store2.agentActions.reexplore;
+      reexploreBtn.classList.toggle("sel", store2.agentActions.reexplore);
+      app2.touched();
+    });
+    agentNoteTa.addEventListener("input", () => {
+      store2.agentActions.note = agentNoteTa.value;
+      app2.touched();
+    });
+    const payload = (action) => {
+      const domOrder = [...document.querySelectorAll(".card")].map((e) => e.dataset.id);
+      return buildPayload(store2, action, domOrder);
+    };
+    const saveEl = () => document.getElementById("savestate");
+    const ship = async (action) => {
+      const send = document.getElementById("sendRound");
+      const fin = document.getElementById("finalize");
+      send.disabled = true;
+      fin.disabled = true;
+      const btn = action === "finalize" ? fin : send;
+      const btnLabel = btn.textContent;
+      btn.textContent = "Sending…";
+      let delivered = false;
       try {
-        reconcile(JSON.parse(ev.data)); setLive("connected");
-        // a plan update may carry the grill questions the agent just wrote —
-        // re-enable the button and clear the pending note
-        const gb = document.getElementById("grillIntents");
-        const gs = document.getElementById("grillIntentsState");
-        if (gb) gb.disabled = false;
-        if (gs) gs.textContent = "";
-      } catch (e) { console.warn("bad plan-updated payload", e); }
-    });
-    es.onopen = () => setLive("connected");
-    es.onerror = () => setLive("reconnecting");  // EventSource auto-reconnects
-  };
-
-  // expose a live-ask hook used by each card's chat composer (see buildCard).
-  // Records the pending message + thread length so a mid-flight reconcile can
-  // re-show it; the agent appends both turns to the thread, which supersedes it.
-  window.__askNow = (cardId, text) => {
-    if (!text || !text.trim()) return false;
-    pendingAsk[cardId] = { len: threadLen(cardId), text: text.trim() };
-    const card = document.querySelector(`.card[data-id="${cardId}"]`);
-    if (card) card.classList.add("awaiting");
-    fetch("/ask", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: "q-" + cardId + "-" + Date.now(), cardId, text: text.trim() }) })
-      .catch(() => {});                           // queued server-side regardless
-    return true;
-  };
-
-  // --- "interview me" grill trigger for the intents section ---
-  // Sends a grill request down the same /ask channel the chat uses. The agent
-  // sees it on stdout, writes agentQuestions[] onto the intents, and they
-  // stream back into the cards over SSE. No new server endpoint.
-  const grillBtn = document.getElementById("grillIntents");
-  const grillStateEl = document.getElementById("grillIntentsState");
-  if (grillBtn) {
-    grillBtn.addEventListener("click", () => {
-      const text = "[GRILL REQUEST] Interview me to sharpen my intents: write "
-        + "pointed agentQuestions[] onto the fuzzy/ambiguous intents so I can "
-        + "clarify them in place.";
-      fetch("/ask", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: "grill-intents-" + Date.now(),
-          cardId: "__intents__", text }) })
-        .then(() => {
+        const r = await fetch("/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload(action))
+        });
+        delivered = r.ok;
+      } catch (e) {
+        delivered = false;
+      }
+      if (!delivered) {
+        btn.textContent = btnLabel;
+        send.disabled = false;
+        fin.disabled = false;
+        refreshBar();
+        document.getElementById("substatus").textContent = "⚠ Could not reach the agent — the deck server may have expired. Your answers are saved; re-run the deck from the terminal and they will reload.";
+        saveEl().textContent = "Saved locally only";
+        saveEl().className = "savestate warn";
+        return;
+      }
+      document.getElementById("wrap").querySelectorAll("header,.lead,.lead-more,.followup,.goal,.howto-d,.progress,#boundariesWrap,#intentsWrap,#mocksWrap,#decisionsWrap,#diagramWrap,#stepsWrap,#finalVerifyWrap,#nextRoundWrap").forEach((n) => n.style.display = "none");
+      document.getElementById("doneBig").textContent = action === "finalize" ? store2.plan.followUp ? "🎉 Follow-ups answered — the build resumes." : "🎉 Plan finalized — handed back to the agent." : "✓ Round sent to the agent.";
+      document.getElementById("doneSmall").textContent = action === "finalize" ? "All saved. The agent has your plan and is taking it from here — you can close this tab." : "All saved. The agent is working on your round — you can close this tab.";
+      document.getElementById("done").classList.add("show");
+      document.getElementById("submitbar").style.display = "none";
+      window.scrollTo(0, 0);
+      setTimeout(() => {
+        try {
+          window.close();
+        } catch (e) {
+        }
+      }, 400);
+    };
+    document.getElementById("sendRound").addEventListener("click", () => ship("send-round"));
+    document.getElementById("finalize").addEventListener("click", () => ship("finalize"));
+    const threadLen = (cid) => {
+      const d = store2.byId(cid);
+      return d && d.thread ? d.thread.length : 0;
+    };
+    const reconcile = (newPlan) => {
+      const openIds = new Set([...document.querySelectorAll(".card.open")].map((c) => c.dataset.id));
+      const scrollY = window.scrollY;
+      const active = document.activeElement;
+      const focusId = active && active.closest ? (active.closest(".card") || {}).dataset?.id : null;
+      const focusSel = active && active.classList && active.classList.contains("chat-input") ? "chat" : active && active.tagName === "TEXTAREA" ? "answer" : null;
+      store2.plan = newPlan;
+      store2.round = newPlan.round || store2.round;
+      app2.renderSections();
+      store2.cards.forEach((c) => {
+        if (openIds.has(c.id)) c.el.classList.add("open");
+        const p = store2.pendingAsk[c.id];
+        if (p != null && threadLen(c.id) > p.len) {
+          c.el.classList.add("open");
+          delete store2.pendingAsk[c.id];
+        }
+        if (store2.pendingAsk[c.id] != null) c.el.classList.add("awaiting");
+      });
+      store2.cards.forEach((c) => {
+        const p = store2.pendingAsk[c.id];
+        if (p == null || typeof p !== "object") return;
+        if (threadLen(c.id) > p.len) return;
+        const chat = c.el.querySelector(".chat-blk");
+        if (!chat) return;
+        const th = chat.querySelector(".thread");
+        const mine = el2("div", "msg");
+        mine.appendChild(el2("div", "who user", "You"));
+        mine.appendChild(mdEl2(null, p.text));
+        th.style.display = "";
+        th.appendChild(mine);
+        const aw = chat.querySelector(".chat-await");
+        if (aw && aw._startAwait) aw._startAwait();
+        else if (aw) aw.style.display = "";
+      });
+      if (focusId && focusSel) {
+        const card = document.querySelector(`.card[data-id="${focusId}"]`);
+        const ta = card && (focusSel === "chat" ? card.querySelector(".chat-input") : card.querySelector(".card-body textarea"));
+        if (ta) {
+          ta.focus();
+        }
+      }
+      window.scrollTo(0, scrollY);
+      refreshAll();
+    };
+    const liveDot = document.getElementById("liveDot");
+    const setLive = (state) => {
+      liveDot.className = "live-dot " + state;
+      liveDot.title = state === "connected" ? "Live — answers update in place" : "Reconnecting to the live stream…";
+    };
+    const startLive = () => {
+      let es;
+      try {
+        es = new EventSource("/events");
+      } catch (e) {
+        return;
+      }
+      es.addEventListener("plan-updated", (ev) => {
+        try {
+          reconcile(JSON.parse(ev.data));
+          setLive("connected");
+          const gb = document.getElementById("grillIntents");
+          const gs = document.getElementById("grillIntentsState");
+          if (gb) gb.disabled = false;
+          if (gs) gs.textContent = "";
+        } catch (e) {
+          console.warn("bad plan-updated payload", e);
+        }
+      });
+      es.onopen = () => setLive("connected");
+      es.onerror = () => setLive("reconnecting");
+    };
+    window.__askNow = (cardId, text) => {
+      if (!text || !text.trim()) return false;
+      store2.pendingAsk[cardId] = { len: threadLen(cardId), text: text.trim() };
+      const card = document.querySelector(`.card[data-id="${cardId}"]`);
+      if (card) card.classList.add("awaiting");
+      fetch("/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: "q-" + cardId + "-" + Date.now(), cardId, text: text.trim() })
+      }).catch(() => {
+      });
+      return true;
+    };
+    const grillBtn = document.getElementById("grillIntents");
+    const grillStateEl = document.getElementById("grillIntentsState");
+    if (grillBtn) {
+      grillBtn.addEventListener("click", () => {
+        const text = "[GRILL REQUEST] Interview me to sharpen my intents: write pointed agentQuestions[] onto the fuzzy/ambiguous intents so I can clarify them in place.";
+        fetch("/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: "grill-intents-" + Date.now(),
+            cardId: "__intents__",
+            text
+          })
+        }).then(() => {
           grillStateEl.textContent = "🎤 sent — the agent is writing clarifying questions…";
           grillBtn.disabled = true;
-        })
-        .catch(() => { grillStateEl.textContent = "⚠ could not reach the agent — try Send to agent."; });
-    });
-  }
+        }).catch(() => {
+          grillStateEl.textContent = "⚠ could not reach the agent — try Send to agent.";
+        });
+      });
+    }
+    return { startLive, reconcile };
+  };
 
-  // initial render + go live
-  renderSections();
-  startLive();
+  // src/main.js
+  var PLAN = window.PLAN;
+  var SAVED = window.SAVED;
+  var THEME_KEY = "plan-html-theme";
+  var applyTheme = (t) => {
+    document.documentElement.dataset.theme = t;
+    const btn = document.getElementById("themeBtn");
+    if (btn) {
+      btn.textContent = t === "light" ? "🌙" : "☀️";
+    }
+  };
+  var savedTheme = null;
+  try {
+    savedTheme = localStorage.getItem(THEME_KEY);
+  } catch (e) {
+    console.warn("theme restore failed", e);
+  }
+  var hour = (/* @__PURE__ */ new Date()).getHours();
+  applyTheme(savedTheme || (hour >= 7 && hour < 19 ? "light" : "dark"));
+  document.getElementById("themeBtn").addEventListener("click", () => {
+    const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    applyTheme(next);
+    try {
+      localStorage.setItem(THEME_KEY, next);
+    } catch (e) {
+      console.warn("theme save failed", e);
+    }
+  });
+  var store = createStore(PLAN, SAVED);
+  restore(store);
+  var { openLightbox, zoomableDiagram } = createLightbox();
+  var app = {
+    store,
+    el,
+    mdEl,
+    md,
+    escapeHtml,
+    openLightbox,
+    zoomableDiagram
+  };
+  var { persist } = createPersist(store, () => {
+    if (app.refreshAddBtns) app.refreshAddBtns();
+  });
+  app.persist = persist;
+  app.touched = () => {
+    persist();
+    if (app.refreshAll) app.refreshAll();
+  };
+  var live = createLive(app);
+  var sections = createSections(app);
+  sections.renderSections();
+  live.startLive();
+})();
 </script>
 </body>
 </html>
