@@ -1,0 +1,22 @@
+[project]
+name = "plan-html"
+version = "0.1.0"
+description = "Interactive decision-deck planning — serve a plan.json as a live HTML deck you work through in the browser."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Dory Zidon" }]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8.0"]
+
+[project.scripts]
+plan-html = "serve_plan:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.setuptools]
+py-modules = ["serve_plan"]

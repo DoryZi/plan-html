@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Playwright
+test-results/
+playwright-report/
+.playwright/
+
+# Local plan/answer artifacts (never commit a user's plan state)
+design/plans/
+*.answers.json
+answers.json
+questions.json
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
