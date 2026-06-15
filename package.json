@@ -1,21 +1,17 @@
 {
   "name": "plan-html",
   "version": "0.1.0",
-  "description": "Interactive decision-deck planning — the deck UI (modular JS bundled into one offline HTML file).",
+  "description": "Interactive decision-deck planning — the deck UI as a single self-contained, offline HTML file (hand-edited, no build step).",
   "license": "MIT",
   "author": "Dory Zidon",
   "type": "module",
   "scripts": {
-    "build": "node scripts/build.js",
-    "build:check": "node scripts/build.js --check",
-    "lint": "eslint src scripts tests/js",
-    "test:js": "node --test \"tests/js/**/*.test.js\"",
+    "lint": "node scripts/lint-deck.js",
     "test:e2e": "playwright test",
-    "test": "npm run build:check && npm run lint && npm run test:js"
+    "test": "npm run lint && npm run test:e2e"
   },
   "devDependencies": {
     "@playwright/test": "^1.45.0",
-    "esbuild": "^0.23.0",
     "eslint": "^9.8.0"
   }
 }

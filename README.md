@@ -26,15 +26,14 @@ a terminal.
 | Path | What it is |
 |------|------------|
 | `serve_plan.py` | The server. Renders `plan.json` into the deck, serves it on `127.0.0.1`, autosaves answers, streams plan changes over SSE (`--live`), and prints each round to stdout. Zero dependencies (stdlib only). |
-| `templates/deck.html` | The deck — a single self-contained, offline HTML file. **Built artifact** (see below), not hand-edited. |
-| `src/` | The deck's JavaScript, as ES modules. Edit here. |
-| `scripts/build.js` | Bundles `src/*.js` into the one inline `<script>` in `templates/deck.html` (esbuild). |
-| `tests/` | `tests/js` (node:test unit), `tests/e2e` (pytest HTTP + Playwright browser). |
+| `templates/deck.html` | The deck — a single self-contained, offline HTML file, hand-edited. Its JavaScript is organized into a few labeled top-level `<script>` blocks that run in document order and share one global scope. No build step, no modules, no CDN. |
+| `scripts/lint-deck.js` | Extracts the deck's inline `<script>` blocks into a temp file and runs ESLint over them. |
+| `tests/` | `tests/e2e` (pytest HTTP + Playwright browser). |
 
 ## Quick start
 
 ```bash
-# serve a plan (no Node needed to run — the deck is pre-built)
+# serve a plan (no Node needed to run — the deck is a single offline HTML file)
 python3 serve_plan.py --plan /abs/path/to/plan.json --live
 ```
 
@@ -52,15 +51,17 @@ cloudflared tunnel --url http://localhost:<port>
 
 ## Develop
 
-The deck UI is modular JS bundled into one offline file (no CDN, opens with
-`file://`). Edit `src/`, then rebuild:
+The deck is a single hand-edited offline HTML file (no CDN, opens with
+`file://`). Edit `templates/deck.html` directly — its JavaScript lives in a few
+labeled top-level `<script>` blocks (markdown/dom helpers, state, cards,
+sections, live + main entry) that run in document order and share one global
+scope. There is no build step.
 
 ```bash
 npm install
-npm run build        # src/*.js -> templates/deck.html
-npm run lint         # eslint
-npm test             # build-drift check + lint + JS unit tests
+npm run lint         # eslint over the deck's inline JS (extracted)
 npm run test:e2e     # Playwright browser e2e (needs Chromium)
+npm test             # lint + Playwright e2e
 ```
 
 ```bash
@@ -69,9 +70,8 @@ pip install -e ".[test]"
 pytest               # HTTP e2e + unit
 ```
 
-CI runs lint, a build-drift check (the committed `deck.html` must equal a fresh
-build), JS unit tests and the Python suite on every push; the Playwright suite
-runs when a browser is available.
+CI runs lint and the Python suite on every push; the Playwright suite runs when
+a browser is available.
 
 ## License
 

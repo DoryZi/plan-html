@@ -1,5 +1,12 @@
-// ESLint flat config. src/ is browser code (the deck), scripts/ and tests/js
-// run in Node. Recommended rules plus a few project conventions.
+// ESLint flat config.
+//
+// The deck (templates/deck.html) is a single hand-edited offline file whose JS
+// lives in labeled top-level <script> blocks. scripts/lint-deck.js extracts
+// those blocks into a temp `deck.inline.js` and runs eslint over it — that file
+// is browser code sharing one global scope (esbuild-style `var` bindings), so
+// it is linted as a non-module script with browser globals.
+//
+// scripts/*.js run in Node.
 import js from "@eslint/js";
 
 const browserGlobals = {
@@ -17,10 +24,12 @@ const nodeGlobals = {
 export default [
   js.configs.recommended,
   {
-    files: ["src/**/*.js"],
+    // The deck's inline JS, extracted by scripts/lint-deck.js. One shared global
+    // scope across the <script> blocks, so it is a classic (non-module) script.
+    files: ["**/deck.inline.js"],
     languageOptions: {
       ecmaVersion: 2022,
-      sourceType: "module",
+      sourceType: "script",
       globals: browserGlobals,
     },
     rules: {
@@ -31,7 +40,7 @@ export default [
     },
   },
   {
-    files: ["scripts/**/*.js", "tests/js/**/*.js"],
+    files: ["scripts/**/*.js"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",

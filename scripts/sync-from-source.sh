@@ -4,13 +4,12 @@
 #
 # The source of truth for the SERVED artifacts is the skill at
 # .claude/skills/plan-html/ in the main repo. This repo is the published copy:
-# it owns the modular `src/`, build, lint, tests and CI, and the committed
-# templates/deck.html is the build output of src/.
+# it owns lint, tests and CI. templates/deck.html is a single hand-edited
+# offline file kept byte-identical between the skill and this repo.
 #
-# Sync copies serve_plan.py and SKILL.md from the skill (those are authored
-# there). It does NOT overwrite templates/deck.html from the skill blindly —
-# run `npm run build` to regenerate it from src/, then verify it matches the
-# skill's served deck with `npm run build:check` semantics.
+# Sync copies serve_plan.py, SKILL.md and templates/deck.html from the skill
+# (those are authored there). After syncing the deck, run `npm run lint` and
+# `npm run test:e2e` to confirm the deck still passes.
 #
 # Usage:
 #   ./scripts/sync-from-source.sh [--dry-run]
@@ -32,9 +31,10 @@ copy() {
     fi
 }
 
-copy "$SKILL_DIR/serve_plan.py" "$REPO_DIR/serve_plan.py"
-copy "$SKILL_DIR/SKILL.md"      "$REPO_DIR/SKILL.md"
+copy "$SKILL_DIR/serve_plan.py"          "$REPO_DIR/serve_plan.py"
+copy "$SKILL_DIR/SKILL.md"               "$REPO_DIR/SKILL.md"
+copy "$SKILL_DIR/templates/deck.html"    "$REPO_DIR/templates/deck.html"
 
 echo
-echo "Note: templates/deck.html is BUILT from src/ — run 'npm run build'."
-echo "The skill's served deck.html should equal the build output."
+echo "Note: templates/deck.html is a single hand-edited offline file."
+echo "Run 'npm run lint' and 'npm run test:e2e' to verify it."

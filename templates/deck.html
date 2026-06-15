@@ -124,11 +124,18 @@
   /* answered cards recede so the unanswered ones stand out (always-on, every width) */
   .card.answered:not(.open):not(:hover) { opacity:.62; }
   .card.answered:not(.open):hover { opacity:1; }
-  /* "show what's left" filter: hide answered/dismissed cards entirely.
-     Never hide an open card (you may be reviewing it) or one with an open
-     question (still needs the agent). */
+  /* "show what's left" filter: hide everything that isn't still asking for
+     your input — answered cards, dismissed cards, AND steps (steps are
+     editable artifacts, never an open to-do). Never hide an open card (you may
+     be reviewing it) or one with an open question (still needs the agent). */
   body.hide-done .card.answered:not(.open):not(.questioned),
+  body.hide-done .card.kind-step:not(.open),
   body.hide-done .card.dismissed:not(.open) { display:none; }
+  /* in "what's left" mode, also hide the steps section's heading/intro/add-row
+     so the filtered view is purely the open questions */
+  body.hide-done #stepsWrap > h2,
+  body.hide-done #stepsWrap > .sechint,
+  body.hide-done #stepsWrap .add-card { display:none; }
   /* when a whole section is filtered away, drop its empty header + add-button */
   body.hide-done .section.all-done { display:none; }
   /* the filter toggle pill in the progress bar */
@@ -240,6 +247,9 @@
   #fvRows td { vertical-align:middle; }
   .fv-del-cell { width:40px; text-align:center; }
   #fvAddWrap { margin-top:10px; }
+  .fv-chat { margin-top:16px; }
+  .loop-diagram { margin:6px 0 10px; cursor:default; }
+  .loop-diagram svg { max-width:560px; }
   .card-title { grid-area:title; min-width:0; }
   .card-title .t { font-weight:650; font-size:16.5px; }
   .card-title .s { color:var(--muted); font-size:14.5px; margin-top:3px; }
@@ -600,7 +610,7 @@
       <div class="ht-arrow">→</div>
       <div class="ht-step loop"><b>2 · Send to agent 🔁 — the loop, when you need it</b>Your questions get answered on the cards, redirects reshape the plan — intents, decisions and the implementation steps all update — and the deck reopens with your answers kept. One round is often enough; loop only while something's still unclear.</div>
       <div class="ht-arrow">→</div>
-      <div class="ht-step stop"><b>3 · Finalize 🏁 — this ends the loop</b>Unlocks when every required card is answered with no open questions. The plan locks, the agent builds, and the ✅ finish-line checks at the bottom prove it's done — green means done.</div>
+      <div class="ht-step stop"><b>3 · Finalize 🏁 — hand it to the build loop</b>Unlocks when every required card is answered with no open questions. Finalizing locks the plan and starts the agent's <b>build → verify → fix</b> loop against the ✅ finish line at the bottom — it runs every check and loops until they all pass. Green means done.</div>
     </div>
   </details>
 
@@ -639,11 +649,39 @@
   </div>
 
   <div id="finalVerifyWrap" style="display:none">
-    <h2>✅ The finish line — what runs AFTER you finalize</h2>
-    <div class="sechint">This is not the loop — it's the stop condition from step 3. Once you finalize, the agent builds and then runs every check below; the plan counts as done only when each row passes.</div>
+    <h2>✅ The finish line — the agent's verification loop</h2>
+    <div class="sechint">
+      <p>Each row is one runnable check that proves an intent is done. After you Finalize, these become the loop the agent runs on its own:</p>
+    </div>
+    <div class="diagram loop-diagram">
+      <svg viewBox="0 0 660 150" role="img" aria-label="build verify fix loop">
+        <defs><marker id="arrow-loop" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#9db5dd"/></marker></defs>
+        <rect x="24" y="52" width="120" height="46" rx="10" class="node"/>
+        <text x="84" y="79" text-anchor="middle" class="node-label">Build</text>
+        <rect x="200" y="52" width="140" height="46" rx="10" class="node alt2"/>
+        <text x="270" y="73" text-anchor="middle" class="node-label">Run the checks</text>
+        <text x="270" y="89" text-anchor="middle" class="node-sub">every row below</text>
+        <rect x="396" y="52" width="120" height="46" rx="10" class="node alt4"/>
+        <text x="456" y="73" text-anchor="middle" class="node-label">Red?</text>
+        <text x="456" y="89" text-anchor="middle" class="node-sub">fix it</text>
+        <rect x="556" y="52" width="92" height="46" rx="10" class="node alt1"/>
+        <text x="602" y="73" text-anchor="middle" class="node-label">All green</text>
+        <text x="602" y="89" text-anchor="middle" class="node-sub">done ✓</text>
+        <line x1="144" y1="75" x2="200" y2="75" class="edge" marker-end="url(#arrow-loop)"/>
+        <line x1="340" y1="75" x2="396" y2="75" class="edge" marker-end="url(#arrow-loop)"/>
+        <line x1="516" y1="75" x2="556" y2="75" class="edge" marker-end="url(#arrow-loop)"/>
+        <text x="536" y="44" text-anchor="middle" class="edge-label">pass</text>
+        <path d="M 456 98 L 456 128 L 84 128 L 84 98" fill="none" class="edge" marker-end="url(#arrow-loop)"/>
+        <text x="270" y="144" text-anchor="middle" class="edge-label">fix → build again</text>
+      </svg>
+    </div>
+    <div class="sechint">
+      <p>A clear finish line is what lets the agent loop and know when to stop. <b>Edit a row, remove one (✕), or add your own</b> — and ask me below if a check is strong enough.</p>
+    </div>
     <div class="ref"><table><thead><tr><th>Intent</th><th>Method</th><th>Command</th><th>Expected</th><th></th></tr></thead>
       <tbody id="fvRows"></tbody></table>
       <div id="fvAddWrap"></div></div>
+    <div class="fv-chat" id="fvChatWrap"></div>
   </div>
 
   <div id="nextRoundWrap">
@@ -683,10 +721,13 @@
 </div>
 
 <script>
+  // ===== deck block: markdown + dom helpers =====
+  // serve_plan.py rewrites the next line's value; the `let` declaration is its
+  // anchor and must stay verbatim, so it stays `let` even though never reassigned.
+  // eslint-disable-next-line prefer-const
   let PLAN = {{PLAN_JSON}};
   const SAVED = {{SAVED_ANSWERS}};
   window.PLAN = PLAN; window.SAVED = SAVED;
-(() => {
   // src/md.js
   var NUL = String.fromCharCode(0);
   var escapeHtml = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -755,7 +796,9 @@
     };
     return { openLightbox: openLightbox2, zoomableDiagram: zoomableDiagram2 };
   };
-
+</script>
+<script>
+  // ===== deck block: state (answers / added / fvState / restore / persist / predicates) =====
   // src/state.js
   var EMPTY_ADDED = () => ({ intents: [], boundaries: [], decisions: [], steps: [] });
   var isDismissed = (store2, id) => Boolean((store2.answers[id] || {}).dismissed);
@@ -763,6 +806,9 @@
   var isSatisfied = (store2, id) => {
     if (isDismissed(store2, id)) return true;
     const card = findCard(store2, id);
+    // steps are authored artifacts, not questions — you edit/remove/add them,
+    // they never need "approval", so they never count as an open to-do.
+    if (card && card.kind === "step") return true;
     if (card && card.userAdded && (card.title || "").trim()) return true;
     const a = store2.answers[id] || {};
     return Boolean(a.choice || a.answer && a.answer.trim() || a.edit && a.edit.trim());
@@ -863,7 +909,9 @@
     return { persist: persist2 };
   };
   var titleOf = (d) => d.title || d.id;
-
+</script>
+<script>
+  // ===== deck block: cards (buildCard + authoring + grill + chat) =====
   // src/cards.js
   var chipClass = (s) => s === "needs-you" ? "you" : s === "agent-call" ? "agent" : "fyi";
   var chipText = (s) => s === "needs-you" ? "needs you" : s === "agent-call" ? "agent's call" : "FYI";
@@ -876,6 +924,7 @@
     const satisfied = store2.satisfied;
     const hasQuestion2 = store2.hasQuestion;
     const card = el2("div", "card");
+    if (kind === "step") card.classList.add("kind-step");
     card.dataset.id = d.id;
     const head = el2("div", "card-head");
     const grip = el2("span", "grip", "⠿");
@@ -1393,23 +1442,33 @@
       renderRelated();
       syncChoiceEls();
       const dz = dismissed(d.id);
+      const isStep = d.kind === "step";
       const q = hasQuestion2(d.id), s = satisfied(d.id) && !dz;
       const go = grillOpen();
-      state.textContent = dz ? "set aside" : q ? satisfied(d.id) ? "answered + question" : "question for agent" : go ? s ? `answered · ${go} to clarify` : `${go} to clarify` : s ? "answered" : "—";
-      state.className = "state" + (dz ? " dz" : go ? " grill" : s ? " set" : q ? " q" : "");
+      // a step is an editable artifact, not a question — show "edit / remove",
+      // never "answered", and never give it the green answered styling.
+      if (isStep) {
+        state.textContent = dz ? "removed" : "editable";
+        state.className = "state" + (dz ? " dz" : "");
+      } else {
+        state.textContent = dz ? "set aside" : q ? satisfied(d.id) ? "answered + question" : "question for agent" : go ? s ? `answered · ${go} to clarify` : `${go} to clarify` : s ? "answered" : "—";
+        state.className = "state" + (dz ? " dz" : go ? " grill" : s ? " set" : q ? " q" : "");
+      }
       card.classList.toggle("has-grill", go > 0);
       dropBtn.textContent = dz ? "↩" : "✕";
       dropBtn.title = dz ? "Bring this back" : dropBtn.title;
-      card.classList.toggle("answered", s);
+      card.classList.toggle("answered", s && !isStep);
       card.classList.toggle("questioned", q && !s);
       card.classList.toggle("dismissed", dz);
     };
     store2.cards.push({ id: d.id, kind, data: d, el: card, refresh });
   };
-
+</script>
+<script>
+  // ===== deck block: sections (renderSections + add buttons + drag) + final-verify + how-to + payload =====
   // src/sections.js
   var createSections = (app2) => {
-    const { store: store2, el: el2, zoomableDiagram: zoomableDiagram2, md: md2, persist: persist2, refreshAll } = app2;
+    const { store: store2, el: el2, mdEl: mdEl2, zoomableDiagram: zoomableDiagram2, md: md2, persist: persist2, refreshAll } = app2;
     let addSeq = 0;
     const newId = (kind) => `user-${kind}-${++addSeq}-${Math.floor(performance.now())}`;
     const blankCard = (kind) => {
@@ -1702,8 +1761,64 @@
       });
       document.getElementById("fvAddWrap").innerHTML = "";
       document.getElementById("fvAddWrap").appendChild(addRow);
+      renderFvChat();
       DRAG_CONTAINERS.forEach(setupDrag);
       refreshAll();
+    };
+    // One chat for the whole finish line: ask the agent whether the checks are
+    // strong enough / what's missing. Posts under the section id "__finalverify__"
+    // (same /ask plumbing as the cards). The agent's replies arrive in the plan's
+    // finalVerifyChat[] over SSE and render here.
+    const renderFvChat = () => {
+      const wrap = document.getElementById("fvChatWrap");
+      if (!wrap) return;
+      wrap.innerHTML = "";
+      const b = el2("div", "blk chat-blk");
+      b.appendChild(el2("div", "lbl", "Discuss the finish line with the agent"));
+      const thread = store2.plan.finalVerifyChat || [];
+      const th = el2("div", "thread");
+      thread.forEach((m) => {
+        const msg = el2("div", "msg");
+        msg.appendChild(el2("div", "who " + (m.role === "agent" ? "agent" : "user"),
+          m.role === "agent" ? "Agent" : "You"));
+        msg.appendChild(mdEl2(null, m.text));
+        th.appendChild(msg);
+      });
+      th.style.display = thread.length ? "" : "none";
+      b.appendChild(th);
+      const await2 = el2("div", "ask-pending", "agent is replying…");
+      await2.style.display = "none";
+      b.appendChild(await2);
+      const composer = el2("div", "composer");
+      const cta = el2("textarea", "chat-input");
+      cta.rows = 2;
+      cta.placeholder = thread.length
+        ? "Reply or ask a follow-up about the verification…"
+        : "Is a check strong enough? What's missing? Ask the agent…";
+      const sendBtn = el2("button", "btn chat-send", "Send ▸");
+      sendBtn.type = "button";
+      const send = () => {
+        const t = cta.value.trim();
+        if (!t) return;
+        if (window.__askNow("__finalverify__", t)) {
+          cta.value = "";
+          await2.style.display = "";
+          await2.textContent = "agent is replying…";
+          await2.classList.remove("stale");
+          setTimeout(() => {
+            await2.textContent = "still queued — no agent is watching this deck right now; it'll answer as soon as one is.";
+            await2.classList.add("stale");
+          }, 25e3);
+        }
+      };
+      sendBtn.addEventListener("click", send);
+      cta.addEventListener("keydown", (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") send();
+      });
+      composer.appendChild(cta);
+      composer.appendChild(sendBtn);
+      b.appendChild(composer);
+      wrap.appendChild(b);
     };
     app2.renderSections = renderSections;
     app2.refreshAddBtns = refreshAddBtns;
@@ -1761,7 +1876,9 @@
       finalVerify: (store2.fvState || []).filter((v) => [v.intent, v.method, v.command, v.expected].some((x) => (x || "").trim()))
     };
   };
-
+</script>
+<script>
+  // ===== deck block: live (SSE / reconcile / __askNow / grill button) + main entry =====
   // src/live.js
   var createLive = (app2) => {
     const { store: store2, el: el2, mdEl: mdEl2 } = app2;
@@ -1861,6 +1978,7 @@
         try {
           window.close();
         } catch {
+          // window.close() is a no-op for non-script-opened tabs; ignore.
         }
       }, 400);
     };
@@ -1979,8 +2097,6 @@
   };
 
   // src/main.js
-  var PLAN = window.PLAN;
-  var SAVED = window.SAVED;
   var THEME_KEY = "plan-html-theme";
   var applyTheme = (t) => {
     document.documentElement.dataset.theme = t;
@@ -2006,7 +2122,7 @@
       console.warn("theme save failed", e);
     }
   });
-  var store = createStore(PLAN, SAVED);
+  var store = createStore(window.PLAN, window.SAVED);
   restore(store);
   var { openLightbox, zoomableDiagram } = createLightbox();
   var app = {
@@ -2029,8 +2145,11 @@
   var live = createLive(app);
   var sections = createSections(app);
   sections.renderSections();
+  // apply saved selections/state to the freshly-built cards on first paint —
+  // without this, saved choices stay invisible until the first click triggers
+  // a refresh (the "click one, all appear" bug).
+  if (app.refreshAll) app.refreshAll();
   live.startLive();
-})();
 </script>
 </body>
 </html>

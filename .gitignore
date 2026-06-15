@@ -9,6 +9,9 @@ __pycache__/
 node_modules/
 npm-debug.log*
 
+# Lint scratch (extracted deck JS — see scripts/lint-deck.js)
+.lint-tmp/
+
 # Playwright
 test-results/
 playwright-report/
