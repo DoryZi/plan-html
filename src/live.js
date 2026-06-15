@@ -104,7 +104,7 @@ export const createLive = (app) => {
         body: JSON.stringify(payload(action)),
       });
       delivered = r.ok;
-    } catch (e) { delivered = false; }
+    } catch { delivered = false; }
     if (!delivered) {
       // the server is gone (likely timed out) — do NOT pretend it was sent;
       // answers are safe in localStorage + the last autosave
@@ -136,7 +136,7 @@ export const createLive = (app) => {
     document.getElementById("submitbar").style.display = "none";
     window.scrollTo(0, 0);
     // best-effort auto-close for script-opened tabs; harmless no-op otherwise
-    setTimeout(() => { try { window.close(); } catch (e) {} }, 400);
+    setTimeout(() => { try { window.close(); } catch { /* popup-blocked: ignore */ } }, 400);
   };
   document.getElementById("sendRound").addEventListener("click", () => ship("send-round"));
   document.getElementById("finalize").addEventListener("click", () => ship("finalize"));
@@ -212,7 +212,7 @@ export const createLive = (app) => {
   const startLive = () => {
     let es;
     try { es = new EventSource("/events"); }
-    catch (e) { return; }                        // not in live mode / no server
+    catch { return; }                        // not in live mode / no server
     es.addEventListener("plan-updated", (ev) => {
       try {
         reconcile(JSON.parse(ev.data)); setLive("connected");

@@ -854,7 +854,7 @@
           if (!r.ok) throw new Error("HTTP " + r.status);
           saveEl().textContent = "Saved ✓";
           saveEl().className = "savestate ok";
-        } catch (e) {
+        } catch {
           saveEl().textContent = "Saved locally only";
           saveEl().className = "savestate warn";
         }
@@ -1838,7 +1838,7 @@
           body: JSON.stringify(payload(action))
         });
         delivered = r.ok;
-      } catch (e) {
+      } catch {
         delivered = false;
       }
       if (!delivered) {
@@ -1860,7 +1860,7 @@
       setTimeout(() => {
         try {
           window.close();
-        } catch (e) {
+        } catch {
         }
       }, 400);
     };
@@ -1923,7 +1923,7 @@
       let es;
       try {
         es = new EventSource("/events");
-      } catch (e) {
+      } catch {
         return;
       }
       es.addEventListener("plan-updated", (ev) => {

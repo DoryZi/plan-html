@@ -123,7 +123,7 @@ export const createPersist = (store, onPersist) => {
         });
         if (!r.ok) throw new Error("HTTP " + r.status);
         saveEl().textContent = "Saved ✓"; saveEl().className = "savestate ok";
-      } catch (e) {
+      } catch {
         // server gone (e.g. timed out) — answers still live in localStorage
         saveEl().textContent = "Saved locally only";
         saveEl().className = "savestate warn";
