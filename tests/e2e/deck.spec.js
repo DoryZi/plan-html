@@ -176,6 +176,9 @@ test("steps are drag-reorderable; new order rides back in the round", async ({ p
     fire(steps, "dragover", { clientY: r.top + 2, clientX: r.left + 2 });
     fire(src, "dragend");
   });
+  // the visible "Step N —" numbers renumber to match the new DOM order
+  await expect(page.locator('#steps .card[data-id="step-1"] .card-title .t')).toContainText("Step 1 —");
+  await expect(page.locator('#steps .card[data-id="step-0"] .card-title .t')).toContainText("Step 2 —");
   // answer the decision so the round is non-empty, then send
   await page.locator('#decisions .card[data-id="d1"] .qbtn').first().click();
   await page.locator("#sendRound").click();
@@ -188,6 +191,49 @@ test("steps are drag-reorderable; new order rides back in the round", async ({ p
     if (!s0 || !s1) return null;
     return s1.priority < s0.priority; // step-1 now ahead of step-0
   }, { timeout: 8000 }).toBe(true);
+});
+
+test("agent answer written to the plan survives a reconnect (durable, not just SSE)", async ({ page, deck }) => {
+  // ask a question on a card
+  await page.goto(deck.url);
+  const card = page.locator('#decisions .card[data-id="d1"]');
+  await card.locator(".card-head").click();
+  await card.locator(".chat-input").fill("Why this fork?");
+  await card.locator(".chat-send").click();
+  await expect.poll(() => deck.readQuestions().some((q) => q.cardId === "d1"), { timeout: 5000 }).toBe(true);
+  // agent answers DURABLY: write the Q&A into the card's thread in the plan and
+  // bump rev (the protocol's reliable path — NOT the ephemeral /answer push).
+  const plan = deck.readPlan();
+  const d = plan.decisions.find((x) => x.id === "d1");
+  d.thread = [
+    { role: "user", text: "Why this fork?" },
+    { role: "agent", text: "Because option A scales better for this case." },
+  ];
+  plan.rev = (plan.rev || 0) + 1;
+  deck.writePlan(plan);
+  // simulate a dropped-then-reconnected stream: reload the page fresh. On load
+  // the server re-sends the full plan, so the answer must still be there.
+  await page.reload();
+  const reloaded = page.locator('#decisions .card[data-id="d1"]');
+  await reloaded.locator(".card-head").click();
+  await expect(reloaded.locator(".thread .who.agent")).toBeVisible({ timeout: 5000 });
+  await expect(reloaded.locator(".thread")).toContainText("scales better");
+});
+
+test("poll fallback: deck still updates when SSE never connects (buffering tunnel)", async ({ page, deck }) => {
+  // Simulate a proxy that buffers/blocks text/event-stream (e.g. a Cloudflare
+  // quick-tunnel): kill /events so SSE delivers nothing. The deck must fall
+  // back to polling GET /plan and still reconcile.
+  await page.route("**/events", (route) => route.abort());
+  await page.goto(deck.url);
+  await expect(page.locator("#title")).toHaveText("E2E plan");
+  // edit the plan as the agent would when answering
+  const plan = deck.readPlan();
+  plan.rev = (plan.rev || 0) + 1;
+  plan.title = "Updated via polling";
+  deck.writePlan(plan);
+  // no SSE — only the GET /plan poll can deliver this (idle interval ~4s)
+  await expect(page.locator("#title")).toHaveText("Updated via polling", { timeout: 12000 });
 });
 
 test("live SSE: editing plan.json updates the open deck in place", async ({ page, deck }) => {

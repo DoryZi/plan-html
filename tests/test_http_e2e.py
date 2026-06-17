@@ -14,11 +14,26 @@ def test_serves_deck_html(server):
     assert "{{PLAN_JSON}}" not in body  # plan was injected
 
 
+def test_plan_endpoint_returns_current_plan(server):
+    # the polling fallback reads GET /plan; it must return the live plan JSON
+    status, body = http_get(server.url("/plan"))
+    assert status == 200
+    plan = json.loads(body)
+    assert plan["title"]  # a real plan object, not the deck HTML
+    # reflects edits to the plan file (what the poller diffs on `rev`)
+    edited = json.loads(server.plan_path.read_text())
+    edited["rev"] = (edited.get("rev") or 0) + 1
+    server.plan_path.write_text(json.dumps(edited))
+    status2, body2 = http_get(server.url("/plan"))
+    assert json.loads(body2)["rev"] == edited["rev"]
+
+
 def test_save_writes_answers_json(server):
     answers = {"round": 1, "answers": {"i1": {"choice": "approve"}}}
     status, _ = http_post(server.url("/save"), answers)
     assert status == 200
-    saved = json.loads((server.plan_path.parent / "answers.json").read_text())
+    saved = json.loads(
+        (server.plan_path.parent / f"{server.plan_path.stem}.answers.json").read_text())
     assert saved["answers"]["i1"]["choice"] == "approve"
 
 
@@ -26,8 +41,8 @@ def test_ask_queues_question_and_emits_stdout(server):
     status, _ = http_post(server.url("/ask"),
                           {"id": "q1", "cardId": "i1", "text": "what about X?"})
     assert status == 200
-    # queued to questions.json
-    qpath = server.plan_path.parent / "questions.json"
+    # queued to <stem>.questions.json
+    qpath = server.plan_path.parent / f"{server.plan_path.stem}.questions.json"
     deadline = time.time() + 5
     while time.time() < deadline and not qpath.exists():
         time.sleep(0.05)

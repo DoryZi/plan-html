@@ -90,6 +90,14 @@ def test_sse_frame_format(serve_module):
 
 def test_answers_and_questions_path_helpers(serve_module, tmp_path):
     plan = tmp_path / "plan.json"
-    assert serve_module.answers_path_for(plan).name == "answers.json"
-    assert serve_module.questions_path_for(plan).name == "questions.json"
+    # named after the plan stem so sibling plans never collide
+    assert serve_module.answers_path_for(plan).name == "plan.answers.json"
+    assert serve_module.questions_path_for(plan).name == "plan.questions.json"
     assert serve_module.answers_path_for(plan).parent == tmp_path
+
+
+def test_sibling_plans_do_not_share_answer_files(serve_module, tmp_path):
+    a = tmp_path / "demo.json"
+    b = tmp_path / "test.json"
+    assert serve_module.answers_path_for(a) != serve_module.answers_path_for(b)
+    assert serve_module.questions_path_for(a) != serve_module.questions_path_for(b)

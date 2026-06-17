@@ -21,6 +21,7 @@ playwright-report/
 design/plans/
 *.answers.json
 answers.json
+*.questions.json
 questions.json
 
 # OS / editor

@@ -1552,10 +1552,33 @@
       });
       persist2();
     };
+    // Sections whose card titles carry an index prefix (e.g. "Step 1 — ",
+    // "I2. ") need that number rewritten after a drag, since it was baked in at
+    // render time. Cosmetic relabel in DOM order — no full re-render.
+    const PREFIX_RE = {
+      steps: /^Step \d+ — /,
+      intents: /^I\d+\. /,
+      boundaries: /^B\d+\. /
+    };
+    const renumber = (cid) => {
+      const re = PREFIX_RE[cid];
+      if (!re) return;
+      const c = document.getElementById(cid);
+      if (!c) return;
+      [...c.querySelectorAll(".card")].forEach((card, idx) => {
+        const t = card.querySelector(".card-title .t");
+        if (!t) return;
+        const prefix = cid === "steps" ? `Step ${idx + 1} — `
+          : cid === "intents" ? `I${idx + 1}. `
+            : `B${idx + 1}. `;
+        t.textContent = prefix + t.textContent.replace(re, "");
+      });
+    };
     const setupDrag = (cid) => {
       const c = document.getElementById(cid);
       if (!c) return;
       applySavedOrder(cid);
+      renumber(cid);
       c.querySelectorAll(".card").forEach((card) => {
         const grip = card.querySelector(".grip");
         if (!grip) return;
@@ -1572,6 +1595,7 @@
           card.draggable = false;
           dragging = null;
           saveOrder(cid);
+          renumber(cid);
         });
       });
       if (c.dataset.dndBound) return;
@@ -2016,6 +2040,7 @@
       const focusSel = active && active.classList && active.classList.contains("chat-input") ? "chat" : active && active.tagName === "TEXTAREA" ? "answer" : null;
       store2.plan = newPlan;
       store2.round = newPlan.round || store2.round;
+      lastPlanRev = newPlan.rev || lastPlanRev;
       app2.renderSections();
       store2.cards.forEach((c) => {
         if (openIds.has(c.id)) c.el.classList.add("open");
@@ -2126,6 +2151,52 @@
       });
       es.onopen = () => setLive("connected");
       es.onerror = () => setLive("reconnecting");
+      es.addEventListener("plan-updated", markSse);
+      es.addEventListener("card-answer", markSse);
+      es.addEventListener("ask-received", markSse);
+      startPollFallback();
+    };
+    // ── Polling fallback ───────────────────────────────────────────────
+    // SSE is primary and instant on local/LAN. But some network paths buffer
+    // text/event-stream so the live push never arrives — notably Cloudflare
+    // quick-tunnels. There, the deck would sit on a stale plan and show
+    // "still queued" forever. So we also poll GET /plan (a plain one-shot
+    // request every proxy forwards) and reconcile on a `rev` bump. Adaptive:
+    // 1s while a question is awaiting a reply, ~4s idle. Single-flight. The
+    // poll only does real work when SSE has gone silent, so on a healthy SSE
+    // connection it's almost a no-op.
+    let lastSseAt = 0;
+    let lastPlanRev = (store2.plan && store2.plan.rev) || 0;
+    let polling = false;
+    const markSse = () => { lastSseAt = nowMs(); };
+    function nowMs() { return (window.performance && performance.now) ? performance.now() : 0; }
+    const sseHealthy = () => lastSseAt && (nowMs() - lastSseAt) < 6e3;
+    const awaitingReply = () => Object.keys(store2.pendingAsk).length > 0;
+    const pollOnce = async () => {
+      if (polling || sseHealthy()) return;
+      polling = true;
+      try {
+        const r = await fetch("/plan", { cache: "no-store" });
+        if (!r.ok) return;
+        const plan = await r.json();
+        const rev = plan.rev || 0;
+        if (rev !== lastPlanRev) {
+          lastPlanRev = rev;
+          reconcile(plan);
+          setLive("connected");
+        }
+      } catch {
+        // network blip — try again next tick
+      } finally {
+        polling = false;
+      }
+    };
+    const startPollFallback = () => {
+      const tick = () => {
+        pollOnce();
+        setTimeout(tick, awaitingReply() ? 1e3 : 4e3);
+      };
+      setTimeout(tick, 1e3);
     };
     window.__askNow = (cardId, text) => {
       if (!text || !text.trim()) return false;

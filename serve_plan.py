@@ -41,6 +41,7 @@ import json
 import logging
 import os
 import re
+import signal
 import socket
 import sys
 import tempfile
@@ -63,10 +64,14 @@ TEMPLATE = Path(__file__).resolve().parent / "templates" / "deck.html"
 def answers_path_for(plan_path: Path) -> Path:
     """Locate the autosave file that sits next to the plan file.
 
+    Named after the plan file (``<stem>.answers.json``) rather than a bare
+    ``answers.json`` so two plans sharing a directory (e.g. several in /tmp)
+    never collide and restore each other's stale answers.
+
     :param plan_path: Resolved path to ``plan.json``.
-    :returns: Path to the sibling ``answers.json``.
+    :returns: Path to the sibling ``<stem>.answers.json``.
     """
-    return plan_path.parent / "answers.json"
+    return plan_path.parent / f"{plan_path.stem}.answers.json"
 
 
 def load_saved_answers(path: Path) -> dict | None:
@@ -185,10 +190,13 @@ def lan_ip() -> str | None:
 def questions_path_for(plan_path: Path) -> Path:
     """Locate the live question inbox that sits next to the plan file.
 
+    Named after the plan file (``<stem>.questions.json``) so plans sharing a
+    directory don't share an inbox.
+
     :param plan_path: Resolved path to ``plan.json``.
-    :returns: Path to the sibling ``questions.json``.
+    :returns: Path to the sibling ``<stem>.questions.json``.
     """
-    return plan_path.parent / "questions.json"
+    return plan_path.parent / f"{plan_path.stem}.questions.json"
 
 
 def append_question(path: Path, question: dict) -> None:
@@ -260,6 +268,26 @@ def build_handler(html_path: Path, plan_path: Path, answers_path: Path,
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
+            elif self.path == "/plan":
+                # Plain one-shot read of the current plan. This is the polling
+                # fallback for environments where SSE doesn't survive the network
+                # path — notably Cloudflare quick-tunnels, which buffer
+                # text/event-stream so the live push never arrives. A one-shot
+                # GET is forwarded by every proxy, so the deck polls this and
+                # reconciles on a `rev` bump when SSE goes silent.
+                try:
+                    body = plan_path.read_bytes()
+                except OSError:
+                    self.send_response(503)
+                    self.end_headers()
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Cache-Control", "no-cache, no-store")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
             elif self.path == "/events":
                 # SSE: hold the connection open; the plan-watcher thread pushes
                 # `plan-updated` events to every registered client.
@@ -268,6 +296,9 @@ def build_handler(html_path: Path, plan_path: Path, answers_path: Path,
                 self.send_header("Cache-Control", "no-cache")
                 self.send_header("Connection", "keep-alive")
                 self.send_header("Access-Control-Allow-Origin", "*")
+                # best-effort hint to disable proxy buffering (nginx & friends);
+                # quick-tunnels may ignore it, which is why /plan polling exists.
+                self.send_header("X-Accel-Buffering", "no")
                 self.end_headers()
                 try:  # push the current plan immediately so a fresh/reconnected client syncs
                     self.wfile.write(b": connected\n\n")
@@ -506,6 +537,22 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001 — any backend failure → fall back to URL
             log.warning("could not auto-open browser (%s); open manually: %s", exc, url)
 
+    # Distinguish a real idle-timeout from an external signal (SIGTERM/SIGINT,
+    # e.g. the parent restarting the deck). Both make done.wait() return without
+    # a round, but they mean different things — and reporting "timed out after
+    # Ns" for a signal that arrived in seconds is misleading.
+    interrupted = threading.Event()
+
+    def _on_signal(signum, _frame):
+        interrupted.set()
+        done.set()
+
+    for _sig in (signal.SIGTERM, signal.SIGINT):
+        try:
+            signal.signal(_sig, _on_signal)
+        except (ValueError, OSError):
+            pass  # not on the main thread / unsupported — skip
+
     got_it = done.wait(timeout=args.timeout)
 
     # graceful shutdown + cleanup of the temp HTML we created
@@ -519,10 +566,16 @@ def main() -> int:
 
     if not got_it:
         partial = load_saved_answers(answers_path)
-        log.error("timed out after %ds — autosaved answers are preserved in %s",
-                  args.timeout, answers_path)
-        print(json.dumps({"action": "timeout", "timedOut": True, "saved": partial},
-                         ensure_ascii=False))
+        if interrupted.is_set():
+            log.info("interrupted — shutting down; autosaved answers preserved in %s",
+                     answers_path)
+            print(json.dumps({"action": "interrupted", "saved": partial},
+                             ensure_ascii=False))
+        else:
+            log.error("timed out after %ds — autosaved answers are preserved in %s",
+                      args.timeout, answers_path)
+            print(json.dumps({"action": "timeout", "timedOut": True, "saved": partial},
+                             ensure_ascii=False))
         return 1
 
     log.info("received the user's round — handing back to the agent")

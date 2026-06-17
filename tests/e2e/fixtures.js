@@ -88,11 +88,11 @@ export const test = base.extend({
       readPlan: () => JSON.parse(readFileSync(planPath, "utf-8")),
       writePlan: (p) => writeFileSync(planPath, JSON.stringify(p)),
       readAnswers: () => {
-        const p = join(dir, "answers.json");
+        const p = join(dir, "plan.answers.json");
         return existsSync(p) ? JSON.parse(readFileSync(p, "utf-8")) : null;
       },
       readQuestions: () => {
-        const p = join(dir, "questions.json");
+        const p = join(dir, "plan.questions.json");
         return existsSync(p) ? JSON.parse(readFileSync(p, "utf-8")) : [];
       },
       stdoutLines,

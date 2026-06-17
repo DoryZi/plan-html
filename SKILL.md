@@ -282,37 +282,53 @@ of truth; the page is a live view of it (SSE), and you keep it current.
    the plan is done. (`ngrok http <port>` is an alternative if `cloudflared`
    isn't installed.)
 
-2. **Loop: watch for asks and answer them live — keep it SNAPPY.** While the
-   deck is open, watch the background server's stdout (and/or `questions.json`)
-   for `ask` events. This watch is the one allowed poll — you're waiting on the
-   user, whom you can't subscribe to; keep it bounded but **tight**: the deck
-   shows a live "agent is replying…" spinner the moment the user hits Send, and
-   if no reply lands within ~25s it flips to an honest "queued — no agent is
-   watching this deck right now." That stale state is the signal you were NOT
-   looping. So while a deck is open and the user is actively chatting, **stay in
-   the loop and answer within seconds** — a back-and-forth should feel like
-   chat, not a round-trip. Don't wander off mid-conversation and leave questions
-   queued; if you must step away, say so. For each `ask`:
-   - Find the card by `cardId`, append to its `thread`:
+2. **Arm a persistent Monitor the instant you serve — this is MANDATORY, not a
+   poll.** Every deck event (ask, clarification, finalize, send-round, timeout)
+   arrives on the server's stdout the microsecond it happens. Do NOT poll the
+   output file between turns — that is what makes a question sit "queued — no
+   agent is watching." Instead, the moment the background server is up, attach a
+   **persistent Monitor** to its output file so each event wakes you instantly,
+   with zero polling — the same instant path finalize already rides:
+
+   ```
+   Monitor(persistent: true, command:
+     tail -n0 -f <server-output-file> |
+       grep -E --line-buffered '"action": ?"(ask|finalize|send-round|timeout)"')
+   ```
+
+   With the Monitor armed, asks, clarifications and finalize are all delivered
+   one uniform way, instantly. The deck shows an "agent is replying…" spinner on
+   Send; if no reply lands in ~25s it flips to "no agent is watching this deck
+   right now" — with the Monitor running, that state should essentially never
+   appear. If it does, your Monitor died: re-arm it.
+
+   **For each `ask` event — answer DURABLY (write the plan), then optionally
+   paint fast (SSE push):**
+   - Find the card by `cardId` and append to its `thread`:
      `{"role":"user","text":<their question>}` then your
      `{"role":"agent","text":<answer>}`.
    - Apply any plan change the answer implies (revise options, edit an intent,
      add/remove a card, redraw a diagram, reorder).
-   - Bump a `rev` counter and **write `plan.json`**. The server detects the
-     change and pushes it over SSE; the user's open page reconciles in place —
-     the answer streams into that card, everything else stays as it was.
-   - Mark the question `answered` in `questions.json` (or just leave it; the
-     thread is the record).
-   - Keep looping until a `send-round`/`finalize`/`timeout` event arrives.
+   - Bump `rev` and **write `plan.json`. This is the source of truth and the
+     ONLY reliable delivery.** The server pushes the new plan over SSE and the
+     page reconciles in place; crucially, the server also re-sends the full plan
+     on every SSE (re)connect — so an answer written to the plan **survives a
+     dropped mobile connection and reappears on reconnect.** An answer that is
+     not in the plan is lost if the user's stream blipped (common on phones/
+     tunnels). Never rely on the push alone.
+   - **Optional instant paint:** you MAY also `POST /answer {cardId, text}` to
+     stream the reply into the card a beat sooner. This is a nicety on top of the
+     plan write, never a substitute — if you skip the plan write, a reconnect
+     shows "still queued" forever even though you "answered."
+   - Keep the Monitor armed until a `send-round`/`finalize`/`timeout` event.
 
-   The user can keep working on other cards while you answer one — only the
-   asked card shows a "thinking…" state. Don't block the whole plan on one
-   question.
+   The user can keep working on other cards while you answer one — only the asked
+   card shows a "thinking…" state. Don't block the whole plan on one question.
 
-   **Fallback:** if you are NOT looping when an `ask` arrives (busy elsewhere),
-   nothing is lost — it's queued in `questions.json` and, after ~25s, the card
-   honestly shows "queued — no agent is watching this deck right now." Pick it
-   up when you return; the answer still streams in when you write the plan.
+   **If an `ask` lands while you're busy elsewhere:** nothing is lost — it's
+   queued in `<plan-stem>.questions.json` and the Monitor still fires. Pick it
+   up; writing the plan delivers the answer (and heals any "queued" state) the
+   moment the page next has the plan.
 
 3. **On `send-round` / `finalize` / `timeout`** — proceed exactly as the
    round rules below describe. (Live answers and rounds coexist: live handles
