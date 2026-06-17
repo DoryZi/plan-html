@@ -135,29 +135,57 @@ contained tasks. The user can drop any boundary with its "Not needed" button.
     outermost shapes, no oceans of empty space. Nodes ~140×48 with ~60px
     horizontal gaps read well.
 
-- **UI work gets wireframes — always, no exceptions.** Any decision about a
+- **UI work gets mocks — always, no exceptions.** Any decision about a
   screen, page, layout, component, or visual flow MUST present **2–3
-  alternative wireframe mocks as its options** — the user picks a design by
-  clicking a mock, not by imagining one from prose. Use option objects (see
-  schema): `{"label", "caption", "viewBox", "svg"}` for lo-fi wireframes, or
-  `{"label", "caption", "html", "width", "height"}` for hi-fi mocks — the
-  deck renders `html` inline in a sandboxed, auto-scaled, zoomable frame.
+  alternative mocks as its options** — the user picks a design by clicking a
+  mock, not by imagining one from prose. Use option objects (see schema):
+  `{"label", "caption", "html", "width", "height"}` for **hi-fi HTML mocks
+  (default — prefer these)**, or `{"label", "caption", "viewBox", "svg"}` for
+  lo-fi SVG wireframes (fallback only). The deck renders `html` inline in a
+  sandboxed, auto-scaled, zoomable iframe.
   **Inline only — NEVER as files.** Do not write mock `.html`/`.png` files to
   disk, do not send mocks as attachments, do not link out. If a visual is not
   inside the deck card, it does not count as delivered. Mock decisions
   automatically render in their own prominent **"🎨 Design mocks"** section
   near the top, expanded by default — you don't need to do anything beyond
-  using option objects. Wireframe rules:
-  - Lo-fi and blocky on purpose: `wf-frame` for the screen/panel outline,
-    `wf-box` for outlined regions, `wf-fill`/`wf-accent` for the regions
-    being decided, `wf-bar` for text-line placeholders, `wf-text` for region
-    labels, `wf-note` for small annotations. Only these classes — no custom
-    colors.
-  - Label every meaningful region (`wf-text`) so the differences between the
-    2–3 mocks are obvious at a glance; the `caption` states the tradeoff in
-    one line ("denser, scales to 100 items" vs "calmer, 10 items max").
-  - Same viewBox across the alternatives so they compare like-for-like
-    (~`0 0 200 140` for a screen, wider for dashboards).
+  using option objects.
+
+  - **MOCKS MUST LOOK LIKE THE PRODUCT WE ALREADY HAVE — this is the rule
+    that matters most.** A mock that doesn't resemble the real app is worse
+    than no mock: the user can't judge a layout that looks nothing like what
+    they'll get. Before authoring any mock, the explore stage MUST have
+    captured the app's actual look — its CSS custom properties / theme tokens
+    (colors, radius, spacing), its real component classes (cards, tables,
+    badges, buttons), and its font. **Default to hi-fi HTML** that pastes
+    those real tokens into a self-contained `<style>` block and reuses the
+    real class names and component shapes, so the mock is visually
+    indistinguishable from a real screen of the app. If the app is dark, the
+    mock is dark; if cards have a 1px `--border` and 8px radius, so does the
+    mock. Populate with realistic sample data, not lorem/placeholders.
+  - **HTML mock authoring (the default path):**
+    - Self-contained `<!doctype html>` with an inline `<style>` — no external
+      CSS, fonts, or scripts (the iframe is sandboxed and offline).
+    - Copy the app's `:root{--…}` tokens verbatim and build with them; reuse
+      the real component class names so the mock reads as the real UI.
+    - Set `width`/`height` to a realistic screen size (e.g. `900×600`); the
+      deck scales it down to fit. Author at full size — don't pre-shrink.
+    - Same `width`/`height` across the 2–3 alternatives so they compare
+      like-for-like; vary only the layout being decided.
+  - **SVG wireframe fallback (only when there's no app look to match yet,
+    e.g. a brand-new product with no styling):** lo-fi and blocky on purpose
+    — `wf-frame` for the screen/panel outline, `wf-box` for outlined regions,
+    `wf-fill`/`wf-accent` for the regions being decided, `wf-bar` for
+    text-line placeholders, `wf-text` for region labels, `wf-note` for small
+    annotations. Only these classes — no custom colors. Sizing discipline is
+    mandatory or text overflows the frame (the common failure): keep ALL
+    shapes and text strictly inside the `viewBox`; leave ~14px padding inside
+    `wf-frame`; keep `wf-text` strings short (truncate, don't let them run
+    past the box edge) and never start text near the left/right margin where
+    it will clip. Same viewBox across the alternatives (~`0 0 200 140` for a
+    screen, wider for dashboards).
+  - Label every meaningful region so the differences between the 2–3 mocks
+    are obvious at a glance; the `caption` states the tradeoff in one line
+    ("denser, scales to 100 items" vs "calmer, 10 items max").
   - Mocks can sit alongside plain-string options on the same card (e.g. a
     third option "None of these — see my notes").
 - **`decisions[]` — the forks.** Any place the design could go more than one
@@ -427,12 +455,16 @@ of truth; the page is a live view of it (SSE), and you keep it current.
       "options": ["Blocking server", "Watched file"],        // optional; replaces Approve/Reject/Your-call
       // UI decisions: options are mock objects instead — the user clicks a mock to pick it.
       // These cards auto-render in the dedicated "Design mocks" section, expanded, zoomable.
+      // PREFER hi-fi HTML that reuses the real app's theme tokens + component classes,
+      // so the mock looks like the product. Same width/height across alternatives.
       // "options": [
-      //   {"label":"Sidebar","caption":"nav left, content right","viewBox":"0 0 200 140",
-      //    "svg":"<rect class='wf-frame' x='4' y='4' width='192' height='132'/><rect class='wf-fill' x='10' y='10' width='44' height='120'/><text class='wf-text' x='32' y='70'>nav</text>…"},
-      //   {"label":"Top tabs", "caption":"full-width content", "viewBox":"0 0 200 140", "svg":"…"},
-      //   {"label":"Hi-fi", "caption":"real layout", "html":"<!doctype html>…full mock page…",
-      //    "width":800, "height":600}   // rendered inline, sandboxed, scaled, zoomable
+      //   {"label":"Sidebar", "caption":"nav left, content right",
+      //    "html":"<!doctype html><html><head><style>:root{/* paste app tokens */}…</style></head><body>…full mock reusing real classes…</body></html>",
+      //    "width":900, "height":600},   // rendered inline, sandboxed, scaled, zoomable
+      //   {"label":"Top tabs", "caption":"full-width content", "html":"…", "width":900, "height":600},
+      //   // SVG wireframe is the lo-fi FALLBACK (only when there's no app look to match):
+      //   {"label":"Lo-fi", "caption":"blocky wireframe", "viewBox":"0 0 200 140",
+      //    "svg":"<rect class='wf-frame' x='4' y='4' width='192' height='132'/>…keep all text inside the box…"}
       // ],
       "dependsOn": ["intent-persist"],                       // optional; linked cards shown with the user's answers
       "thread": [],                                          // Q&A history, optional

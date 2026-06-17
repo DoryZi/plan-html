@@ -35,7 +35,10 @@ const SAMPLE_PLAN = {
       options: ["A", "B"],
     },
   ],
-  steps: [{ id: "step-0", title: "First step", description: "do it", intent: "i1" }],
+  steps: [
+    { id: "step-0", title: "First step", description: "do it", intent: "i1" },
+    { id: "step-1", title: "Second step", description: "then this", intent: "i1" },
+  ],
   finalVerify: [{ intent: "i1", method: "e2e", command: "run", expected: "ok" }],
   diagramSvg: "<rect class='node' x='10' y='10' width='140' height='48'/>",
   diagramViewBox: "0 0 200 80",

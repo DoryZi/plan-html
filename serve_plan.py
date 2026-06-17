@@ -318,8 +318,29 @@ def build_handler(html_path: Path, plan_path: Path, answers_path: Path,
                     log.error("could not queue question (%s): %s", questions_path, exc)
                     self._respond_json(500, b'{"ok":false}')
                     return
-                # emit on stdout so a watching agent loop wakes immediately
+                # echo an immediate per-card "received — agent is on it" frame so
+                # the deck never shows the misleading "no agent watching" while a
+                # Monitor is about to wake the agent on the stdout line below.
+                push_sse(sse_frame("ask-received",
+                                   json.dumps({"cardId": q["cardId"], "id": q["id"]},
+                                              ensure_ascii=False)),
+                         sse_clients, clients_lock)
+                # emit on stdout so a watching agent Monitor wakes immediately (push)
                 print(json.dumps({"action": "ask", **q}, ensure_ascii=False), flush=True)
+                self._respond_json(200)
+            elif self.path == "/answer":
+                # agent pushed a single-card answer — stream it to the open deck
+                # over SSE without a full plan rewrite. Body: {cardId, text, id?}.
+                data = self._read_json()
+                if data is None or not (data.get("cardId") or "").strip() \
+                        or not (data.get("text") or "").strip():
+                    self._respond_json(400, b'{"ok":false}')
+                    return
+                ans = {"cardId": data["cardId"].strip(), "text": data["text"].strip(),
+                       "id": data.get("id") or ""}
+                push_sse(sse_frame("card-answer",
+                                   json.dumps(ans, ensure_ascii=False)),
+                         sse_clients, clients_lock)
                 self._respond_json(200)
             elif self.path == "/submit":
                 data = self._read_json()
@@ -340,6 +361,25 @@ def build_handler(html_path: Path, plan_path: Path, answers_path: Path,
                 self.end_headers()
 
     return Handler
+
+
+def push_sse(frame: bytes, sse_clients: list, clients_lock: threading.Lock) -> None:
+    """Write one SSE frame to every open client, dropping any that have closed.
+
+    :param frame: An encoded SSE frame (from :func:`sse_frame`).
+    :param sse_clients: Shared list of open SSE ``wfile`` streams.
+    :param clients_lock: Guards mutation of ``sse_clients``.
+    """
+    with clients_lock:
+        dead = []
+        for w in sse_clients:
+            try:
+                w.write(frame)
+                w.flush()
+            except OSError:
+                dead.append(w)
+        for w in dead:
+            sse_clients.remove(w)
 
 
 def sse_frame(event: str, data: str) -> bytes:
@@ -386,16 +426,7 @@ def watch_and_push(plan_path: Path, sse_clients: list, clients_lock: threading.L
             frame = b": heartbeat\n\n"
             heartbeat_at = 0
         if frame is not None:
-            with clients_lock:
-                dead = []
-                for w in sse_clients:
-                    try:
-                        w.write(frame)
-                        w.flush()
-                    except OSError:
-                        dead.append(w)
-                for w in dead:
-                    sse_clients.remove(w)
+            push_sse(frame, sse_clients, clients_lock)
         time.sleep(0.3)
 
 

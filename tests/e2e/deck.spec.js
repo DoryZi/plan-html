@@ -99,6 +99,97 @@ test("editable finish-line: add a verify row, send carries it", async ({ page, d
   }, { timeout: 8000 }).toBe(true);
 });
 
+test("finalize is never hard-blocked: a confirm guards early finalize, and it ships", async ({ page, deck }) => {
+  await page.goto(deck.url);
+  // d1 is a required (needs-you) card; leave it unanswered. Finalize must still
+  // be clickable (not disabled) and pop a confirm naming what's unanswered.
+  await expect(page.locator("#finalize")).toBeEnabled();
+  let dialogMsg = "";
+  page.on("dialog", (d) => { dialogMsg = d.message(); d.accept(); });
+  await page.locator("#finalize").click();
+  expect(dialogMsg).toMatch(/required card/);
+  // confirming ships a finalize round
+  await expect.poll(() => {
+    return deck.stdoutLines.map((l) => { try { return JSON.parse(l); } catch { return null; } })
+      .filter(Boolean).some((e) => e.action === "finalize");
+  }, { timeout: 8000 }).toBe(true);
+});
+
+test("finalize with everything answered ships without a confirm", async ({ page, deck }) => {
+  await page.goto(deck.url);
+  // satisfy every required card: the decision and the intent (quick approve)
+  await page.locator('#decisions .card[data-id="d1"] .qbtn').first().click();
+  await page.locator('#intents .card[data-id="i1"] .qbtn').first().click();
+  // no required cards or open questions remain → finalize should not confirm
+  await expect(page.locator("#substatus")).toContainText("All clear");
+  let dialogFired = false;
+  page.on("dialog", (d) => { dialogFired = true; d.accept(); });
+  await page.locator("#finalize").click();
+  await expect.poll(() => {
+    return deck.stdoutLines.map((l) => { try { return JSON.parse(l); } catch { return null; } })
+      .filter(Boolean).some((e) => e.action === "finalize");
+  }, { timeout: 8000 }).toBe(true);
+  expect(dialogFired).toBe(false);
+});
+
+test("agent answer clears the open-question state (no lingering finalize nag)", async ({ page, deck }) => {
+  await page.goto(deck.url);
+  // ask a question on the decision card via its chat composer
+  const card = page.locator('#decisions .card[data-id="d1"]');
+  await card.locator(".card-head").click(); // expand
+  await card.locator(".chat-input").fill("Why this fork?");
+  await card.locator(".chat-send").click();
+  // the ask is queued for the agent
+  await expect.poll(() => deck.readQuestions().some((q) => q.cardId === "d1"), { timeout: 5000 }).toBe(true);
+  // agent answers via the fast /answer path
+  await page.request.post(deck.url + "answer", {
+    data: { cardId: "d1", text: "Because A scales better." },
+  });
+  // the answer streams into the thread
+  await expect(card.locator(".thread .who.agent")).toBeVisible({ timeout: 5000 });
+  // and finalizing now reports NO open question in the confirm (only the
+  // still-unanswered required card) — proving pendingAsk was cleared.
+  let dialogMsg = "";
+  page.on("dialog", (d) => { dialogMsg = d.message(); d.accept(); });
+  await page.locator("#finalize").click();
+  expect(dialogMsg).not.toMatch(/open question/);
+});
+
+test("steps are drag-reorderable; new order rides back in the round", async ({ page, deck }) => {
+  await page.goto(deck.url);
+  await expect(page.locator("#steps .card")).toHaveCount(2);
+  // HTML5 drag-and-drop can't be driven by mouse moves in Chromium, so dispatch
+  // the native drag events (sharing one DataTransfer) the deck's handlers expect.
+  await page.evaluate(() => {
+    const steps = document.getElementById("steps");
+    const src = steps.querySelector('.card[data-id="step-1"]');
+    const tgt = steps.querySelector('.card[data-id="step-0"]');
+    const dt = new DataTransfer();
+    const fire = (el, type, extra = {}) => {
+      const ev = new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: dt, ...extra });
+      el.dispatchEvent(ev);
+    };
+    // grip mousedown arms draggable, then the drag sequence
+    src.querySelector(".grip").dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    fire(src, "dragstart");
+    const r = tgt.getBoundingClientRect();
+    fire(steps, "dragover", { clientY: r.top + 2, clientX: r.left + 2 });
+    fire(src, "dragend");
+  });
+  // answer the decision so the round is non-empty, then send
+  await page.locator('#decisions .card[data-id="d1"] .qbtn').first().click();
+  await page.locator("#sendRound").click();
+  await expect.poll(() => {
+    const evt = deck.stdoutLines.map((l) => { try { return JSON.parse(l); } catch { return null; } })
+      .filter(Boolean).find((e) => e.action === "send-round");
+    if (!evt) return null;
+    const s0 = evt.cards.find((c) => c.id === "step-0");
+    const s1 = evt.cards.find((c) => c.id === "step-1");
+    if (!s0 || !s1) return null;
+    return s1.priority < s0.priority; // step-1 now ahead of step-0
+  }, { timeout: 8000 }).toBe(true);
+});
+
 test("live SSE: editing plan.json updates the open deck in place", async ({ page, deck }) => {
   await page.goto(deck.url);
   await expect(page.locator("#title")).toHaveText("E2E plan");
