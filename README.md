@@ -3,9 +3,9 @@
 >
 > **Stop wasting time on AI. I run practical experiments — real lessons you can use tomorrow, biweekly.**
 >
-> **[Subscribe to AI Will Replace Your Engineers →](https://doryzidon.com)**
+> ▶ **[Watch the demo on YouTube](https://youtu.be/cFwvulWoTE4)** · 📖 **[Read the write-up](https://doryzidon.com/blog/stop-approving-plans-you-didnt-read)** · ✉️ **[Subscribe to the newsletter](https://www.linkedin.com/build-relation/newsletter-follow?entityUrn=7453650303100383232)**
 >
-> ▶ Full walkthrough on YouTube — _coming soon_ · [@aiwillreplaceyou](https://youtube.com/@aiwillreplaceyou)
+> More on [@aiwillreplaceyou](https://youtube.com/@aiwillreplaceyou)
 <!-- experiment-banner:end -->
 
 # plan-html
