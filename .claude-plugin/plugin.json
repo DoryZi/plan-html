@@ -1,0 +1,19 @@
+{
+  "name": "plan-html",
+  "version": "0.1.0",
+  "description": "Interactive decision-deck planning for Claude Code — turn a plan into a live HTML deck you work through in the browser (intent cards, decision cards, boundaries, steps, finish-line verification), answered with buttons or free text and iterated in rounds until you finalize. Built for humans, not a wall of markdown.",
+  "keywords": [
+    "planning",
+    "agentic",
+    "claude-code",
+    "skill",
+    "interactive",
+    "html",
+    "orchestration",
+    "loops"
+  ],
+  "author": "Dory Zidon",
+  "homepage": "https://doryzidon.com",
+  "repository": "https://github.com/DoryZi/plan-html",
+  "license": "MIT"
+}

@@ -46,6 +46,41 @@ a terminal.
 | `scripts/lint-deck.js` | Extracts the deck's inline `<script>` blocks into a temp file and runs ESLint over them. |
 | `tests/` | `tests/e2e` (pytest HTTP + Playwright browser). |
 
+## Install
+
+plan-html is a **Claude Code skill** — install it once and your agent invokes it
+whenever you ask to plan something interactively.
+
+**Option A — plugin marketplace (easiest):**
+
+```text
+/plugin marketplace add DoryZi/plan-html
+/plugin install plan-html
+```
+
+Restart Claude Code, then just ask it to plan a feature — it picks up `/plan-html`
+automatically.
+
+**Option B — clone into your skills directory:**
+
+```bash
+# user-level (available in every project)
+git clone https://github.com/DoryZi/plan-html ~/.claude/skills/plan-html
+
+# or project-level (just this repo)
+git clone https://github.com/DoryZi/plan-html .claude/skills/plan-html
+```
+
+Claude Code auto-discovers any skill under `.claude/skills/`, so `/plan-html`
+is available the next time you start it. No build step and nothing to compile —
+the server is stdlib Python and the deck is a single offline HTML file.
+
+**Requirements:** Python ≥ 3.10. (Node is only needed to run the dev/lint/test
+tooling, not to use the skill.)
+
+> Want to drive the server by hand, without an agent? Skip straight to
+> [Quick start](#quick-start).
+
 ## Quick start
 
 ```bash

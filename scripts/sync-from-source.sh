@@ -35,6 +35,9 @@ copy "$SKILL_DIR/serve_plan.py"          "$REPO_DIR/serve_plan.py"
 copy "$SKILL_DIR/SKILL.md"               "$REPO_DIR/SKILL.md"
 copy "$SKILL_DIR/templates/deck.html"    "$REPO_DIR/templates/deck.html"
 
+# Plugin-marketplace discovery: keep skills/plan-html/SKILL.md identical to root.
+copy "$SKILL_DIR/SKILL.md"               "$REPO_DIR/skills/plan-html/SKILL.md"
+
 echo
 echo "Note: templates/deck.html is a single hand-edited offline file."
 echo "Run 'npm run lint' and 'npm run test:e2e' to verify it."

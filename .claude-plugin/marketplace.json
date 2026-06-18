@@ -1,0 +1,19 @@
+{
+  "name": "plan-html",
+  "owner": {
+    "name": "Dory Zidon",
+    "url": "https://doryzidon.com"
+  },
+  "metadata": {
+    "description": "plan-html — interactive decision-deck planning skill for Claude Code.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "plan-html",
+      "source": ".",
+      "description": "Turn a plan into a live HTML deck you work through in the browser — intent and decision cards, answered with buttons or free text, iterated in rounds until you finalize.",
+      "strict": false
+    }
+  ]
+}
