@@ -21,6 +21,22 @@ your questions live; you reshape the plan in the browser (add/edit/strike cards,
 reorder, ask, grill). The deck is the review surface — not a wall of markdown in
 a terminal.
 
+![Intent cards at the top of the deck](docs/img/intents.png)
+
+| | |
+|---|---|
+| ![A decision card expanded — options, tradeoffs, and a live chat with the agent](docs/img/decision-expanded.png) | ![The finish line — a verification loop and acceptance-criteria table](docs/img/finish-line.png) |
+| _A decision card: options, tradeoffs, and a live back-and-forth with the agent right inside the card._ | _The finish line: a verification loop and the acceptance criteria that prove the plan is done._ |
+
+## Features
+
+- **Reshapeable** — add, edit, strike and drag-reorder cards, steps, and finish-line rows; your changes are authoritative and ride back to the agent.
+- **Live answers** — ask a card a question and the agent's reply streams back into it (SSE), with the answer written into the plan so it survives a dropped connection.
+- **Works remotely** — serve on your LAN or behind a tunnel; an adaptive polling fallback keeps updates flowing even through proxies that buffer SSE.
+- **Finalize on your terms** — finalize early and let the agent decide what's unanswered (with a confirm), or loop until everything's pinned.
+- **Autosaves everything** — every answer is persisted next to the plan; an interrupted session loses nothing.
+- **Zero dependencies to run** — stdlib Python server, single offline `deck.html`. No build step, no CDN.
+
 ## What's here
 
 | Path | What it is |
@@ -48,6 +64,11 @@ python3 serve_plan.py --plan plan.json --host 0.0.0.0   # LAN
 # or expose a running deck publicly with a tunnel:
 cloudflared tunnel --url http://localhost:<port>
 ```
+
+Live updates use SSE, with an automatic polling fallback for environments that
+buffer event streams (Cloudflare quick-tunnels do this) — so the deck stays in
+sync over a tunnel even when the live push can't get through. Pass a fixed
+`--port` when tunnelling so the public URL survives a server restart.
 
 ## Develop
 
