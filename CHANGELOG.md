@@ -2,6 +2,15 @@
 
 All notable changes to **plan-html** are documented here.
 
+## v0.1.1 — 2026-06-19
+
+- Add Claude Code **plugin-marketplace support** (`.claude-plugin/plugin.json` +
+  `marketplace.json`) so plan-html can be installed via
+  `/plugin marketplace add DoryZi/plan-html`.
+- Add install instructions (plugin marketplace + clone) to the README.
+- Refresh the plugin description (benefit-first) and point the homepage at the
+  write-up.
+
 ## v0.1.0 — 2026-06-18
 
 First public release.

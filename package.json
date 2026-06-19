@@ -1,6 +1,6 @@
 {
   "name": "plan-html",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Interactive decision-deck planning — the deck UI as a single self-contained, offline HTML file (hand-edited, no build step).",
   "license": "MIT",
   "author": "Dory Zidon",
