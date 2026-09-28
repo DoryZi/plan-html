@@ -245,3 +245,94 @@ test("live SSE: editing plan.json updates the open deck in place", async ({ page
   deck.writePlan(plan);
   await expect(page.locator("#title")).toHaveText("Live-updated title", { timeout: 8000 });
 });
+
+test("show what's left collapses fully-hidden sections, and restores them", async ({ page, deck }) => {
+  await page.goto(deck.url);
+  // Answer the only decision. Steps never count as open to-dos, so now the
+  // steps + decisions sections hold nothing awaiting the user, while the
+  // intent card is still open.
+  await page.locator('#decisions .card[data-id="d1"] .qbtn').first().click();
+  const toggle = page.locator("#leftToggle");
+  await expect(toggle).toHaveClass(/show/);
+
+  await toggle.click();
+  // Regression: sections whose every card is hidden must drop their heading and
+  // add-row too. `.section.all-done` never matched anything, so these headers
+  // used to stay on screen and the filter looked like it did nothing.
+  await expect(page.locator("#stepsWrap")).toHaveClass(/all-hidden/);
+  await expect(page.locator("#decisionsWrap")).toHaveClass(/all-hidden/);
+  await expect(page.locator("#stepsWrap h2")).toBeHidden();
+  // the section that still has an open card stays put
+  await expect(page.locator("#intentsWrap")).not.toHaveClass(/all-hidden/);
+  await expect(page.locator('#intents .card[data-id="i1"]')).toBeVisible();
+
+  // Negative case: turning the filter off restores every section.
+  await toggle.click();
+  await expect(page.locator("#stepsWrap")).not.toHaveClass(/all-hidden/);
+  await expect(page.locator("#decisionsWrap")).not.toHaveClass(/all-hidden/);
+  await expect(page.locator("#stepsWrap h2")).toBeVisible();
+});
+
+test("card Q&A threads ride back with the round (the reasoning, not just the pick)", async ({ page, deck }) => {
+  await page.goto(deck.url);
+  // The agent answered a question on this card in a previous exchange.
+  const plan = deck.readPlan();
+  plan.rev = (plan.rev || 0) + 1;
+  plan.decisions[0].thread = [
+    { role: "user", text: "why option A?" },
+    { role: "agent", text: "because B needs a lock we cannot enforce" },
+  ];
+  deck.writePlan(plan);
+  // Wait for the live reconcile to actually land the thread in the DOM before
+  // interacting — the card was already rendered pre-write, so its mere
+  // presence proves nothing about the reconcile having happened yet.
+  await expect(page.locator('#decisions .card[data-id="d1"] .thread .msg')).toHaveCount(2, { timeout: 8000 });
+
+  await page.locator('#decisions .card[data-id="d1"] .qbtn').first().click();
+  await page.locator("#sendRound").click();
+
+  const thread = await expect.poll(() => {
+    const evt = deck.stdoutLines.map((l) => { try { return JSON.parse(l); } catch { return null; } })
+      .filter(Boolean).find((e) => e.action === "send-round");
+    if (!evt) return null;
+    return (evt.cards.find((c) => c.id === "d1") || {}).thread || null;
+  }, { timeout: 8000 }).not.toBeNull();
+
+  const evt = deck.stdoutLines.map((l) => { try { return JSON.parse(l); } catch { return null; } })
+    .filter(Boolean).find((e) => e.action === "send-round");
+  const d1 = evt.cards.find((c) => c.id === "d1");
+  expect(d1.thread).toHaveLength(2);
+  expect(d1.thread[1].text).toContain("lock we cannot enforce");
+  // negative case: a card with no discussion carries no thread key at all
+  const i1 = evt.cards.find((c) => c.id === "i1");
+  expect(i1.thread).toBeUndefined();
+});
+
+test("markdown tables render as real tables, not raw pipes", async ({ page, deck }) => {
+  const plan = deck.readPlan();
+  plan.rev = (plan.rev || 0) + 1;
+  plan.decisions[0].building =
+    "Intro line.\n\n| Harness | Tier | Note |\n|---|---|---|\n" +
+    "| **Claude** | 2 | uses `hooks` |\n| Cursor | 0 | tail only |\n\nTrailing line.";
+  deck.writePlan(plan);
+  await page.goto(deck.url);
+
+  const card = page.locator('#decisions .card[data-id="d1"]');
+  await card.click();
+  const table = card.locator(".md table").first();
+  await expect(table).toBeVisible();
+  await expect(table.locator("thead th")).toHaveCount(3);
+  await expect(table.locator("tbody tr")).toHaveCount(2);
+  // inline markdown survives inside cells
+  await expect(table.locator("tbody tr").first().locator("strong")).toHaveText("Claude");
+  await expect(table.locator("tbody tr").first().locator("code")).toHaveText("hooks");
+  // and the raw pipe syntax is gone from the rendered text
+  await expect(card.locator(".md").first()).not.toContainText("|---|");
+
+  // negative case: a lone pipe line without a delimiter row stays plain text
+  const plan2 = deck.readPlan();
+  plan2.rev = (plan2.rev || 0) + 1;
+  plan2.decisions[0].building = "not a table | just a pipe in prose";
+  deck.writePlan(plan2);
+  await expect.poll(async () => card.locator(".md table").count(), { timeout: 8000 }).toBe(0);
+});

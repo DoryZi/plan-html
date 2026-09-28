@@ -136,11 +136,25 @@
   body.hide-done #stepsWrap > h2,
   body.hide-done #stepsWrap > .sechint,
   body.hide-done #stepsWrap .add-card { display:none; }
-  /* when a whole section is filtered away, drop its empty header + add-button */
-  body.hide-done .section.all-done { display:none; }
+  /* When the filter hides every card in a section, drop that section's heading,
+     hint and add-row too — otherwise the page still looks full of empty headers.
+     Sections are `#<name>Wrap` divs and `.all-hidden` is set by
+     syncSectionVisibility(); the previous `.section.all-done` selector matched
+     no element in the document and so never fired. */
+  body.hide-done #intentsWrap.all-hidden,
+  body.hide-done #mocksWrap.all-hidden,
+  body.hide-done #boundariesWrap.all-hidden,
+  body.hide-done #decisionsWrap.all-hidden,
+  body.hide-done #stepsWrap.all-hidden { display:none !important; }
   /* the filter toggle pill in the progress bar */
   .prog-row { display:flex; align-items:center; gap:12px; margin-top:7px; }
   .prog-row .txt { margin-top:0; flex:1; }
+  /* markdown tables in card bodies and threads */
+  .md table { border-collapse:collapse; margin:11px 0; font-size:13px; max-width:100%; }
+  .md th, .md td { border:1px solid var(--line); padding:6px 10px; text-align:left;
+    vertical-align:top; }
+  .md th { background:var(--panel2); font-weight:700; color:var(--ink); white-space:nowrap; }
+  .md td code, .md th code { white-space:nowrap; }
   .left-toggle { flex:0 0 auto; border:1px solid var(--line); background:var(--panel2);
     color:var(--muted); border-radius:999px; padding:4px 13px; font:inherit; font-size:12.5px;
     font-weight:650; cursor:pointer; white-space:nowrap; display:none;
@@ -746,12 +760,22 @@
       /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
       '<a href="$2" target="_blank" rel="noopener">$1</a>'
     );
+    // GFM tables: a header row, a |---|---| delimiter row, then body rows.
+    // Runs after the inline rules so cells keep their bold/code, and before the
+    // list + paragraph passes so the block is emitted whole.
+    s = s.replace(/(^|\n)(\|[^\n]*\|[ \t]*\n\|[ :\-|]+\|[ \t]*\n(?:\|[^\n]*\|[ \t]*(?:\n|$))*)/g, (_, pre, block) => {
+      const rows = block.trim().split("\n").filter((r) => r.trim());
+      const cells = (r) => r.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+      const th = cells(rows[0]).map((c) => `<th>${c}</th>`).join("");
+      const tb = rows.slice(2).map((r) => `<tr>${cells(r).map((c) => `<td>${c}</td>`).join("")}</tr>`).join("");
+      return `${pre}<table><thead><tr>${th}</tr></thead><tbody>${tb}</tbody></table>`;
+    });
     s = s.replace(/(^|\n)((?:[-*] .*(?:\n|$))+)/g, (_, pre, block) => {
       const items = block.trim().split(/\n/).map((l) => `<li>${l.replace(/^[-*] /, "")}</li>`).join("");
       return `${pre}<ul>${items}</ul>`;
     });
     s = s.split(/\n{2,}/).map(
-      (p) => new RegExp("^(<ul|<pre|" + NUL + ")").test(p.trim()) ? p : `<p>${p.replace(/\n/g, "<br>")}</p>`
+      (p) => new RegExp("^(<ul|<pre|<table|" + NUL + ")").test(p.trim()) ? p : `<p>${p.replace(/\n/g, "<br>")}</p>`
     ).join("");
     s = s.replace(new RegExp(NUL + "(\\d+)" + NUL, "g"), (_, i) => stash[+i]);
     return s;
@@ -802,7 +826,7 @@
   // src/state.js
   var EMPTY_ADDED = () => ({ intents: [], boundaries: [], decisions: [], steps: [] });
   var isDismissed = (store2, id) => Boolean((store2.answers[id] || {}).dismissed);
-  var findCard = (store2, id) => (store2.plan.boundaries || []).find((d) => d.id === id) || (store2.plan.intents || []).find((d) => d.id === id) || (store2.plan.decisions || []).find((d) => d.id === id) || store2.added.boundaries.find((d) => d.id === id) || store2.added.intents.find((d) => d.id === id) || store2.added.decisions.find((d) => d.id === id) || store2.added.steps.find((d) => d.id === id);
+  var findCard = (store2, id) => (store2.plan.boundaries || []).find((d) => d.id === id) || (store2.plan.intents || []).find((d) => d.id === id) || (store2.plan.decisions || []).find((d) => d.id === id) || store2.added.boundaries.find((d) => d.id === id) || store2.added.intents.find((d) => d.id === id) || store2.added.decisions.find((d) => d.id === id) || store2.added.steps.find((d) => d.id === id) || (store2.plan.steps || []).find((d) => d.id === id);
   var isSatisfied = (store2, id) => {
     if (isDismissed(store2, id)) return true;
     const card = findCard(store2, id);
@@ -1878,6 +1902,10 @@
           question: (a.question || "").trim(),
           edit: (a.edit || "").trim() || null
         };
+        // The card's Q&A history — the reasoning behind the answer, not just the
+        // pick. Rides back with the round so an agent reading only the round
+        // payload still receives the discussion that produced the decision.
+        if (Array.isArray(c.data.thread) && c.data.thread.length) base.thread = c.data.thread;
         if (c.data.userAdded) {
           base.userAdded = true;
           base.draft = c.data;
@@ -1907,6 +1935,26 @@
   var createLive = (app2) => {
     const { store: store2, el: el2, mdEl: mdEl2 } = app2;
     const needsYouCards = () => store2.cards.filter((c) => store2.plan.followUp ? c.data.status === "needs-you" : c.kind === "intent" || c.kind === "boundary" || c.data.status === "needs-you");
+    // Sections whose heading/hint/add-row should disappear when the "what's
+    // left" filter hides every card inside them.
+    const SECTION_WRAPS = ["intentsWrap", "mocksWrap", "boundariesWrap", "decisionsWrap", "stepsWrap"];
+    // Mark any section that has cards but none currently visible. The class is
+    // cleared BEFORE measuring: while a wrap is hidden its children all report
+    // `offsetParent === null`, so measuring without clearing would latch the
+    // section off permanently once it had hidden even once.
+    const syncSectionVisibility = () => {
+      const filtering = document.body.classList.contains("hide-done");
+      SECTION_WRAPS.forEach((id) => {
+        const wrap = document.getElementById(id);
+        if (!wrap) return;
+        wrap.classList.remove("all-hidden");
+        if (!filtering) return;
+        const cards = [...wrap.querySelectorAll(".card")];
+        if (cards.length > 0 && !cards.some((c) => c.offsetParent !== null)) {
+          wrap.classList.add("all-hidden");
+        }
+      });
+    };
     const refreshBar = () => {
       const total = store2.cards.length;
       const answered = store2.cards.filter((c) => store2.satisfied(c.id)).length;
@@ -1932,6 +1980,7 @@
       if (filtering && left === 0) {
         document.body.classList.remove("hide-done");
       }
+      syncSectionVisibility();
     };
     const refreshAll = () => {
       store2.cards.forEach((c) => c.refresh());

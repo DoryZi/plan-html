@@ -381,6 +381,11 @@ of truth; the page is a live view of it (SSE), and you keep it current.
      answer. Always read it; it overrides/refines the button.
    - `question` — the user needs an answer before deciding. **Answer it in
      the card's `thread`** (see below), don't make them dig in the terminal.
+   - `thread` — the card's Q&A history (`[{role,text},…]`), present only when
+     the card was discussed. **This is the reasoning behind the answer**: the
+     questions the user asked and the answers given. Read it before acting on
+     `choice`/`answer` — a pick often only makes sense given the discussion, and
+     on finalize this is the record of WHY each decision went the way it did.
    - `edit` — the user rewrote an intent or a boundary in place. Replace the
      card's text with their version (and adjust dependent decisions/steps/
      verify if the rewrite changes scope). An edited boundary is the user
