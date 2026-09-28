@@ -564,7 +564,9 @@ def main() -> int:
     except OSError as exc:
         log.warning("temp cleanup left files behind in %s: %s", tmp, exc)
 
-    if not got_it:
+    # A signal also sets `done`, so `got_it` alone cannot tell a round from a
+    # kill; only a populated result_box means the user actually sent a round.
+    if not got_it or "round" not in result_box:
         partial = load_saved_answers(answers_path)
         if interrupted.is_set():
             log.info("interrupted — shutting down; autosaved answers preserved in %s",

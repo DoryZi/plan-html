@@ -69,15 +69,45 @@ test("edit a step in place; edited step rides back with its draft", async ({ pag
   }, { timeout: 5000 }).toBe(true);
 });
 
-test("grill button sends a [GRILL REQUEST] ask", async ({ page, deck }) => {
+test("interview popup asks one question at a time and lands answers on the plan", async ({ page, deck }) => {
   await page.goto(deck.url);
-  const grill = page.locator("#grillIntents");
-  await expect(grill).toBeVisible();
-  await grill.click();
-  await expect(page.locator("#grillIntentsState")).toContainText("sent");
+  const ivBtn = page.locator("#grillPlan");
+  await expect(ivBtn).toBeVisible();
+  await ivBtn.click();
+  await expect(page.locator("#ivOverlay")).toBeVisible();
+
+  // the click queued [INTERVIEW START] for the agent
   await expect.poll(() => {
-    return deck.readQuestions().some((q) => (q.text || "").includes("[GRILL REQUEST]"));
+    return deck.readQuestions().some((q) => (q.text || "").includes("[INTERVIEW START]"));
   }, { timeout: 5000 }).toBe(true);
+
+  // simulate the agent asking the first question
+  const plan = deck.readPlan();
+  plan.rev = (plan.rev || 0) + 1;
+  plan.interview = { state: "asking", max: 8, turns: [], next: { id: "iv-1", q: "What are you building?" } };
+  deck.writePlan(plan);
+
+  await expect(page.locator("#ivQ")).toContainText("What are you building?", { timeout: 8000 });
+  await page.locator("#ivA").fill("A tool that tracks weekly spend against a budget.");
+  await page.locator("#ivNext").click();
+
+  // the answer rides back to the agent under the question's id
+  await expect.poll(() => {
+    return deck.readQuestions().some((q) => q.id === "iv-1" && (q.text || "").includes("weekly spend"));
+  }, { timeout: 5000 }).toBe(true);
+
+  // simulate the agent wrapping up the interview
+  const plan2 = deck.readPlan();
+  plan2.rev = (plan2.rev || 0) + 1;
+  plan2.interview = {
+    state: "done", max: 8,
+    turns: [{ id: "iv-1", q: "What are you building?", a: "A tool that tracks weekly spend against a budget." }],
+    next: null,
+  };
+  deck.writePlan(plan2);
+
+  await expect(page.locator("#ivOverlay")).toBeHidden({ timeout: 8000 });
+  await expect(page.locator("#grillPlanState")).toContainText("Interview done: 1 answer");
 });
 
 test("editable finish-line: add a verify row, send carries it", async ({ page, deck }) => {
@@ -335,4 +365,56 @@ test("markdown tables render as real tables, not raw pipes", async ({ page, deck
   plan2.decisions[0].building = "not a table | just a pipe in prose";
   deck.writePlan(plan2);
   await expect.poll(async () => card.locator(".md table").count(), { timeout: 8000 }).toBe(0);
+});
+
+test("discovered section is hidden when empty, shown with the finding when present", async ({ page, deck }) => {
+  await page.goto(deck.url);
+  await expect(page.locator("#discoveredWrap")).toBeHidden();
+
+  const plan = deck.readPlan();
+  plan.rev = (plan.rev || 0) + 1;
+  plan.discovered = [
+    {
+      id: "disc-1",
+      title: "There's already a rate limiter",
+      finding: "middleware/throttle.py already limits per user.",
+      impact: "Reuse it instead of adding a new one.",
+      source: "middleware/throttle.py",
+    },
+  ];
+  deck.writePlan(plan);
+  await expect(page.locator("#discoveredWrap")).toBeVisible();
+  const card = page.locator('#discovered .card[data-id="disc-1"]');
+  await expect(card).toHaveCount(1);
+  await card.click();
+  await expect(card).toContainText("middleware/throttle.py already limits per user");
+  await expect(card).toContainText("Reuse it instead of adding a new one");
+  // read-only: no approve/reject/your-call buttons, unlike every other card kind
+  await expect(card.locator(".qbtn")).toHaveCount(0);
+});
+
+test("discovered cards never gate finalize and ride back in the round with their finding", async ({ page, deck }) => {
+  const plan = deck.readPlan();
+  plan.discovered = [{ id: "disc-1", title: "Found it", finding: "Some existing code already does this." }];
+  deck.writePlan(plan);
+  await page.goto(deck.url);
+  await expect(page.locator('#discovered .card[data-id="disc-1"]')).toHaveCount(1);
+
+  // satisfy the one required card and intent so finalize ships without a confirm
+  await page.locator('#decisions .card[data-id="d1"] .qbtn').first().click();
+  await page.locator('#intents .card[data-id="i1"] .qbtn').first().click();
+  let dialogFired = false;
+  page.on("dialog", (d) => { dialogFired = true; d.accept(); });
+  await page.locator("#finalize").click();
+  await expect.poll(() => {
+    return deck.stdoutLines.map((l) => { try { return JSON.parse(l); } catch { return null; } })
+      .filter(Boolean).some((e) => e.action === "finalize");
+  }, { timeout: 8000 }).toBe(true);
+  expect(dialogFired).toBe(false);
+
+  const evt = deck.stdoutLines.map((l) => { try { return JSON.parse(l); } catch { return null; } })
+    .filter(Boolean).find((e) => e.action === "finalize");
+  const disc = evt.cards.find((c) => c.id === "disc-1");
+  expect(disc.kind).toBe("discovered");
+  expect(disc.draft.finding).toContain("existing code already does this");
 });

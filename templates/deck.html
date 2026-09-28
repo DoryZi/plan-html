@@ -142,6 +142,7 @@
      syncSectionVisibility(); the previous `.section.all-done` selector matched
      no element in the document and so never fired. */
   body.hide-done #intentsWrap.all-hidden,
+  body.hide-done #discoveredWrap.all-hidden,
   body.hide-done #mocksWrap.all-hidden,
   body.hide-done #boundariesWrap.all-hidden,
   body.hide-done #decisionsWrap.all-hidden,
@@ -210,6 +211,7 @@
   .chip.intent { background:rgba(196,165,255,.15); color:var(--intent); }
   .chip.boundary { background:rgba(94,234,212,.13); color:var(--boundary); }
   .chip.step { background:rgba(139,150,173,.15); color:var(--chip-fyi); }
+  .chip.discovered { background:rgba(110,168,255,.15); color:var(--chip-agent); }
   .added-tag { grid-area:state; align-self:center; flex:0 0 auto; font-size:11px;
     font-weight:700; color:var(--accent); background:rgba(110,168,255,.12);
     padding:2px 8px; border-radius:6px; margin-right:6px; white-space:nowrap; }
@@ -256,6 +258,80 @@
   .grill-me:hover:not(:disabled) { background:rgba(251,191,36,.18); }
   .grill-me:disabled { opacity:.5; cursor:default; }
   .grill-state { color:var(--muted); font-size:13px; }
+  /* interview / redesign panel — sits above the intents */
+  .interview { margin:16px 0 22px; padding:16px 18px; border-radius:14px;
+    background:linear-gradient(135deg, rgba(251,191,36,.10), rgba(157,123,255,.08));
+    border:1px solid rgba(251,191,36,.35); }
+  .iv-row { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .iv-ico { font-size:26px; line-height:1; flex:0 0 auto; }
+  .iv-text { flex:1 1 320px; min-width:0; }
+  .iv-title { font-size:16px; font-weight:700; color:var(--ink); margin-bottom:3px; }
+  .iv-sub { font-size:13.5px; color:var(--muted); line-height:1.5; }
+  .iv-btn { flex:0 0 auto; display:inline-flex; align-items:center; gap:8px; border:0; border-radius:10px;
+    padding:11px 18px; font:inherit; font-size:14px; font-weight:700; cursor:pointer; color:#1a1400;
+    background:var(--warn); box-shadow:0 2px 10px rgba(251,191,36,.25);
+    transition:transform .08s, box-shadow .15s, opacity .15s; }
+  .iv-btn:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 4px 16px rgba(251,191,36,.35); }
+  .iv-btn:active:not(:disabled) { transform:translateY(0); }
+  .iv-btn:disabled { opacity:.55; cursor:default; box-shadow:none; }
+  html[data-theme="light"] .iv-btn { color:#fff; }
+  .iv-steps { display:flex; gap:6px; flex-wrap:wrap; list-style:none; margin:12px 0 0; padding:0; }
+  .iv-steps li { display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--muted);
+    padding:5px 10px; border-radius:999px; border:1px solid var(--line); background:var(--panel); }
+  .iv-steps li b { display:inline-grid; place-items:center; width:18px; height:18px; border-radius:999px;
+    font-size:11px; background:var(--panel2); color:var(--muted); }
+  .iv-steps li.on { color:var(--ink); border-color:var(--warn); }
+  .iv-steps li.on b { background:var(--warn); color:#1a1400; }
+  html[data-theme="light"] .iv-steps li.on b { color:#fff; }
+  .iv-steps li.done { color:var(--ok); border-color:rgba(74,222,128,.4); }
+  .iv-steps li.done b { background:var(--ok); color:#06210f; }
+  .iv-status { margin-top:12px; padding:10px 12px; border-radius:10px; font-size:13.5px; line-height:1.5;
+    border:1px solid var(--line); background:var(--panel); color:var(--ink); }
+  .iv-status.sent { border-color:rgba(110,168,255,.45); }
+  .iv-status.landed { border-color:rgba(74,222,128,.45); }
+  .iv-status.err { border-color:rgba(251,113,133,.5); }
+  .iv-spin { display:inline-block; width:12px; height:12px; border-radius:999px; vertical-align:-1px;
+    margin-right:6px; border:2px solid var(--accent); border-top-color:transparent;
+    animation:spin .7s linear infinite; }
+  .iv-jump { margin-left:8px; border:1px solid var(--ok); background:transparent; color:var(--ok);
+    border-radius:8px; padding:4px 10px; font:inherit; font-size:12.5px; font-weight:650; cursor:pointer; }
+  .iv-jump:hover { background:rgba(74,222,128,.12); }
+  @media (max-width:640px) { .iv-btn { width:100%; justify-content:center; } }
+  .iv-tr-toggle { margin-left:8px; border:1px solid var(--line); background:transparent; color:var(--muted);
+    border-radius:8px; padding:3px 9px; font:inherit; font-size:12px; cursor:pointer; }
+  .iv-tr-body { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+  /* the interview popup */
+  .iv-overlay { position:fixed; inset:0; z-index:9000; background:rgba(5,8,16,.62);
+    backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:20px; }
+  .iv-overlay[hidden] { display:none; }
+  .iv-modal { width:min(720px, 100%); max-height:min(86vh, 900px); overflow:auto; background:var(--panel);
+    border:1px solid rgba(251,191,36,.45); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.45);
+    padding:18px 20px 20px; }
+  .iv-mhead { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; }
+  .iv-mtitle { font-size:17px; font-weight:800; }
+  .iv-mprog { font-size:12.5px; color:var(--muted); margin-top:2px; }
+  .iv-x { border:1px solid var(--line); background:transparent; color:var(--muted); border-radius:8px;
+    padding:5px 10px; font:inherit; font-size:12.5px; cursor:pointer; white-space:nowrap; }
+  .iv-x:hover { color:var(--ink); border-color:var(--accent); }
+  .iv-transcript { display:flex; flex-direction:column; gap:8px; margin:6px 0 12px; }
+  .iv-turn { border:1px solid var(--line); border-radius:10px; padding:8px 11px; background:var(--panel2);
+    font-size:13px; line-height:1.45; }
+  .iv-turn .tq { color:var(--muted); margin-bottom:3px; }
+  .iv-turn .ta { color:var(--ink); white-space:pre-wrap; }
+  .iv-q { font-size:17px; font-weight:650; line-height:1.45; margin:4px 0 10px; }
+  .iv-q p { margin:0; }
+  .iv-a { width:100%; box-sizing:border-box; font:inherit; font-size:14px; line-height:1.5; padding:10px 12px;
+    border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); resize:vertical;
+    min-height:96px; }
+  .iv-a:focus { outline:none; border-color:var(--warn); }
+  .iv-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:10px; }
+  .iv-ghost { border:1px solid var(--line); background:transparent; color:var(--muted); border-radius:10px;
+    padding:10px 14px; font:inherit; font-size:13px; cursor:pointer; }
+  .iv-ghost:hover { color:var(--ink); border-color:var(--accent); }
+  .iv-wait { display:flex; align-items:center; gap:8px; color:var(--accent); font-size:14px; padding:14px 0 6px; }
+  .iv-readytxt { font-size:16px; font-weight:650; margin:6px 0 4px; }
+  .iv-rebuilding { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--accent); padding:14px 0 6px; }
+  .iv-kbd { font-size:12px; color:var(--muted); margin-left:auto; }
   /* editable final-verify table cells */
   .fv-in { padding:6px 8px; font-size:13.5px; }
   #fvRows td { vertical-align:middle; }
@@ -628,14 +704,57 @@
     </div>
   </details>
 
+  <section class="interview" id="redesignBar">
+    <div class="iv-row">
+      <div class="iv-ico">🎤</div>
+      <div class="iv-text">
+        <div class="iv-title">Not quite the plan you had in mind?</div>
+        <div class="iv-sub">Let the agent interview you about what you actually want. It only asks and listens, one question at a time. Your answers are saved on the plan; the next <b>Send to agent</b> rebuilds the deck from them.</div>
+      </div>
+      <button class="iv-btn" id="grillPlan" type="button"><span class="iv-lbl">Interview me &amp; redesign</span> <span class="iv-arrow">▸</span></button>
+    </div>
+    <ol class="iv-steps" id="ivSteps">
+      <li><b>1</b> Agent asks</li>
+      <li><b>2</b> You answer, one question at a time</li>
+      <li><b>3</b> Send to agent</li>
+      <li><b>4</b> Deck rebuilt from your answers</li>
+    </ol>
+    <div class="iv-status" id="grillPlanState" hidden></div>
+  </section>
+
+  <div class="iv-overlay" id="ivOverlay" hidden>
+    <div class="iv-modal" role="dialog" aria-modal="true" aria-labelledby="ivModalTitle">
+      <div class="iv-mhead">
+        <div>
+          <div class="iv-mtitle" id="ivModalTitle">🎤 Interview</div>
+          <div class="iv-mprog" id="ivProg">Starting</div>
+        </div>
+        <button type="button" class="iv-x" id="ivPause" title="Pause. You can resume any time; nothing is lost.">Pause ✕</button>
+      </div>
+      <div class="iv-transcript" id="ivTranscript" style="display:none"></div>
+      <div id="ivCurrent" hidden>
+        <div class="iv-q md" id="ivQ"></div>
+        <textarea class="iv-a" id="ivA" rows="4" placeholder="Answer in your own words. Short is fine."></textarea>
+        <div class="iv-actions">
+          <button type="button" class="iv-btn" id="ivNext">Next ▸</button>
+          <button type="button" class="iv-ghost" id="ivEnough">Done for now</button>
+          <span class="iv-kbd">Ctrl+Enter to send</span>
+        </div>
+      </div>
+      <div class="iv-wait" id="ivWaitRow" hidden><span class="iv-spin"></span><span id="ivWaitTxt">thinking…</span></div>
+    </div>
+  </div>
+
   <div id="intentsWrap" style="display:none">
     <h2>🧭 User intent — what we're building, in your words</h2>
     <div class="sechint">One intent = one outcome you want + why + how we prove it's done. Not a feature list, not an implementation step. Edit until it says exactly what you mean.</div>
-    <div class="grill-bar">
-      <button class="grill-me" id="grillIntents" type="button">🎤 Interview me to sharpen these intents ▸</button>
-      <span class="grill-state" id="grillIntentsState"></span>
-    </div>
     <div id="intents"></div>
+  </div>
+
+  <div id="discoveredWrap" style="display:none">
+    <h2>🔍 Discovered — what we found while exploring</h2>
+    <div class="sechint">Findings from exploring the codebase that change or inform the plan. Informational — nothing to approve, just to know.</div>
+    <div id="discovered"></div>
   </div>
 
   <div id="mocksWrap" style="display:none">
@@ -826,13 +945,15 @@
   // src/state.js
   var EMPTY_ADDED = () => ({ intents: [], boundaries: [], decisions: [], steps: [] });
   var isDismissed = (store2, id) => Boolean((store2.answers[id] || {}).dismissed);
-  var findCard = (store2, id) => (store2.plan.boundaries || []).find((d) => d.id === id) || (store2.plan.intents || []).find((d) => d.id === id) || (store2.plan.decisions || []).find((d) => d.id === id) || store2.added.boundaries.find((d) => d.id === id) || store2.added.intents.find((d) => d.id === id) || store2.added.decisions.find((d) => d.id === id) || store2.added.steps.find((d) => d.id === id) || (store2.plan.steps || []).find((d) => d.id === id);
+  var findCard = (store2, id) => (store2.plan.boundaries || []).find((d) => d.id === id) || (store2.plan.intents || []).find((d) => d.id === id) || (store2.plan.discovered || []).find((d) => d.id === id) || (store2.plan.decisions || []).find((d) => d.id === id) || store2.added.boundaries.find((d) => d.id === id) || store2.added.intents.find((d) => d.id === id) || store2.added.decisions.find((d) => d.id === id) || store2.added.steps.find((d) => d.id === id) || (store2.plan.steps || []).find((d) => d.id === id);
   var isSatisfied = (store2, id) => {
     if (isDismissed(store2, id)) return true;
     const card = findCard(store2, id);
     // steps are authored artifacts, not questions — you edit/remove/add them,
     // they never need "approval", so they never count as an open to-do.
-    if (card && card.kind === "step") return true;
+    // discovered cards are informational findings, not questions either —
+    // there is nothing to approve, so they never gate Finalize.
+    if (card && (card.kind === "step" || card.kind === "discovered")) return true;
     if (card && card.userAdded && (card.title || "").trim()) return true;
     const a = store2.answers[id] || {};
     return Boolean(a.choice || a.answer && a.answer.trim() || a.edit && a.edit.trim());
@@ -957,11 +1078,11 @@
     head.appendChild(el2("span", "chev", "▶"));
     head.appendChild(el2(
       "span",
-      kind === "intent" ? "chip intent" : kind === "boundary" ? "chip boundary" : kind === "step" ? "chip step" : "chip " + chipClass(d.status),
-      kind === "intent" ? "intent" : kind === "boundary" ? "boundary" : kind === "step" ? "step" : chipText(d.status)
+      kind === "intent" ? "chip intent" : kind === "boundary" ? "chip boundary" : kind === "step" ? "chip step" : kind === "discovered" ? "chip discovered" : "chip " + chipClass(d.status),
+      kind === "intent" ? "intent" : kind === "boundary" ? "boundary" : kind === "step" ? "step" : kind === "discovered" ? "discovered" : chipText(d.status)
     ));
     const titleWrap = el2("div", "card-title");
-    const prefix = kind === "intent" ? `I${i + 1}. ` : kind === "boundary" ? `B${i + 1}. ` : kind === "step" ? `Step ${i + 1} — ` : `${i + 1}. `;
+    const prefix = kind === "intent" ? `I${i + 1}. ` : kind === "boundary" ? `B${i + 1}. ` : kind === "step" ? `Step ${i + 1} — ` : kind === "discovered" ? "" : `${i + 1}. `;
     const titleEl = el2("div", "t", prefix + (titleOf(d) || "Untitled"));
     titleWrap.appendChild(titleEl);
     const summaryLine = el2("div", "s", d.summary || "");
@@ -1135,6 +1256,24 @@
       blk.appendChild(editBtn);
       blk.appendChild(editTa);
       body.appendChild(blk);
+    }
+    if (kind === "discovered") {
+      const blk = el2("div", "blk");
+      blk.appendChild(el2("div", "lbl", "What we found"));
+      blk.appendChild(mdEl2(null, d.finding || ""));
+      body.appendChild(blk);
+      if (d.impact) {
+        const ib = el2("div", "blk");
+        ib.appendChild(el2("div", "lbl", "Why it matters"));
+        ib.appendChild(mdEl2(null, d.impact));
+        body.appendChild(ib);
+      }
+      if (d.source) {
+        const sb = el2("div", "blk");
+        sb.appendChild(el2("div", "lbl", "Source"));
+        sb.appendChild(el2("div", "s", d.source));
+        body.appendChild(sb);
+      }
     }
     if (d.agentQuestions && d.agentQuestions.length) {
       const blk = el2("div", "blk grill-blk");
@@ -1405,7 +1544,7 @@
       card.classList.add("open");
     }
     const opts = el2("div", "opts");
-    const choices = mockOpts.length || plainOpts.length ? plainOpts.map((o) => ({ kind: "custom", label: o })) : kind === "intent" ? [
+    const choices = kind === "discovered" ? [] : mockOpts.length || plainOpts.length ? plainOpts.map((o) => ({ kind: "custom", label: o })) : kind === "intent" ? [
       { kind: "approve", label: "This is what I want" },
       { kind: "reject", label: "Not quite — see my notes/edit" }
     ] : kind === "boundary" ? [
@@ -1451,7 +1590,7 @@
       touched();
     });
     optBlk.appendChild(ta);
-    if (kind !== "step") body.appendChild(optBlk);
+    if (kind !== "step" && kind !== "discovered") body.appendChild(optBlk);
     card.appendChild(body);
     container.appendChild(card);
     const grillOpen = () => {
@@ -1467,12 +1606,17 @@
       syncChoiceEls();
       const dz = dismissed(d.id);
       const isStep = d.kind === "step";
+      const isDiscovered = d.kind === "discovered";
       const q = hasQuestion2(d.id), s = satisfied(d.id) && !dz;
       const go = grillOpen();
       // a step is an editable artifact, not a question — show "edit / remove",
-      // never "answered", and never give it the green answered styling.
+      // never "answered", and never give it the green answered styling. A
+      // discovered card is a read-only finding — same idea, different label.
       if (isStep) {
         state.textContent = dz ? "removed" : "editable";
+        state.className = "state" + (dz ? " dz" : "");
+      } else if (isDiscovered) {
+        state.textContent = dz ? "set aside" : "found";
         state.className = "state" + (dz ? " dz" : "");
       } else {
         state.textContent = dz ? "set aside" : q ? satisfied(d.id) ? "answered + question" : "question for agent" : go ? s ? `answered · ${go} to clarify` : `${go} to clarify` : s ? "answered" : "—";
@@ -1481,7 +1625,7 @@
       card.classList.toggle("has-grill", go > 0);
       dropBtn.textContent = dz ? "↩" : "✕";
       dropBtn.title = dz ? "Bring this back" : dropBtn.title;
-      card.classList.toggle("answered", s && !isStep);
+      card.classList.toggle("answered", s && !isStep && !isDiscovered);
       card.classList.toggle("questioned", q && !s);
       card.classList.toggle("dismissed", dz);
     };
@@ -1638,6 +1782,7 @@
     const SECTION_IDS = [
       "boundaries",
       "intents",
+      "discovered",
       "mockDecisions",
       "decisions",
       "steps",
@@ -1685,6 +1830,15 @@
       document.getElementById("intentsWrap").style.display = "";
       intents.forEach((d, i) => buildCard(app2, d, i, "intent", document.getElementById("intents")));
       addBtn("intent", "intents", document.getElementById("intents"), "intent");
+      // discovered[] is agent-authored only (no "+ Add" — it's a record of what
+      // was found, not something the user drafts) and hidden entirely when empty.
+      const discovered = PLAN2.discovered || [];
+      discovered.forEach((d, i) => {
+        if (!d.id) d.id = `disc-${i}`;
+        d.kind = "discovered";
+      });
+      document.getElementById("discoveredWrap").style.display = discovered.length ? "" : "none";
+      discovered.forEach((d, i) => buildCard(app2, d, i, "discovered", document.getElementById("discovered")));
       const isMockDecision = (d) => (d.options || []).some((o) => o && typeof o === "object" && (o.svg || o.html));
       const mockDecisions = (PLAN2.decisions || []).filter(isMockDecision);
       const plainDecisions = [
@@ -1914,6 +2068,9 @@
           base.draft = c.data;
           if (!c.data.userAdded) base.userEdited = true;
         }
+        // discovered cards have no choice/answer to carry — ride the finding/
+        // impact/source back so a fresh agent read of the round has it too.
+        if (c.kind === "discovered") base.draft = c.data;
         if (c.data.agentQuestions && c.data.agentQuestions.length) {
           const g = a.grill || {};
           base.grill = c.data.agentQuestions.map((gq, qi) => {
@@ -1937,7 +2094,7 @@
     const needsYouCards = () => store2.cards.filter((c) => store2.plan.followUp ? c.data.status === "needs-you" : c.kind === "intent" || c.kind === "boundary" || c.data.status === "needs-you");
     // Sections whose heading/hint/add-row should disappear when the "what's
     // left" filter hides every card inside them.
-    const SECTION_WRAPS = ["intentsWrap", "mocksWrap", "boundariesWrap", "decisionsWrap", "stepsWrap"];
+    const SECTION_WRAPS = ["intentsWrap", "discoveredWrap", "mocksWrap", "boundariesWrap", "decisionsWrap", "stepsWrap"];
     // Mark any section that has cards but none currently visible. The class is
     // cleared BEFORE measuring: while a wrap is hidden its children all report
     // `offsetParent === null`, so measuring without clearing would latch the
@@ -2061,7 +2218,7 @@
         saveEl().className = "savestate warn";
         return;
       }
-      document.getElementById("wrap").querySelectorAll("header,.lead,.lead-more,.followup,.goal,.howto-d,.progress,#boundariesWrap,#intentsWrap,#mocksWrap,#decisionsWrap,#diagramWrap,#stepsWrap,#finalVerifyWrap,#nextRoundWrap").forEach((n) => n.style.display = "none");
+      document.getElementById("wrap").querySelectorAll("header,.lead,.lead-more,.followup,.goal,.howto-d,.progress,#boundariesWrap,#intentsWrap,#discoveredWrap,#mocksWrap,#decisionsWrap,#diagramWrap,#stepsWrap,#finalVerifyWrap,#nextRoundWrap").forEach((n) => n.style.display = "none");
       document.getElementById("doneBig").textContent = action === "finalize" ? store2.plan.followUp ? "🎉 Follow-ups answered — the build resumes." : "🎉 Plan finalized — handed back to the agent." : "✓ Round sent to the agent.";
       document.getElementById("doneSmall").textContent = action === "finalize" ? "All saved. The agent has your plan and is taking it from here — you can close this tab." : "All saved. The agent is working on your round — you can close this tab.";
       document.getElementById("done").classList.add("show");
@@ -2140,12 +2297,10 @@
       }
       es.addEventListener("plan-updated", (ev) => {
         try {
-          reconcile(JSON.parse(ev.data));
+          const nextPlan = JSON.parse(ev.data);
+          reconcile(nextPlan);
           setLive("connected");
-          const gb = document.getElementById("grillIntents");
-          const gs = document.getElementById("grillIntentsState");
-          if (gb) gb.disabled = false;
-          if (gs) gs.textContent = "";
+          ivSync(nextPlan);
         } catch (e) {
           console.warn("bad plan-updated payload", e);
         }
@@ -2233,6 +2388,7 @@
           lastPlanRev = rev;
           reconcile(plan);
           setLive("connected");
+          ivSync(plan);
         }
       } catch {
         // network blip — try again next tick
@@ -2260,27 +2416,204 @@
       });
       return true;
     };
-    const grillBtn = document.getElementById("grillIntents");
-    const grillStateEl = document.getElementById("grillIntentsState");
-    if (grillBtn) {
-      grillBtn.addEventListener("click", () => {
-        const text = "[GRILL REQUEST] Interview me to sharpen my intents: write pointed agentQuestions[] onto the fuzzy/ambiguous intents so I can clarify them in place.";
-        fetch("/ask", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: "grill-intents-" + Date.now(),
-            cardId: "__intents__",
-            text
-          })
-        }).then(() => {
-          grillStateEl.textContent = "🎤 sent — the agent is writing clarifying questions…";
-          grillBtn.disabled = true;
-        }).catch(() => {
-          grillStateEl.textContent = "⚠ could not reach the agent — try Send to agent.";
-        });
+    // ===== interview (discovery only) =====
+    // The agent asks about what we're building; the user answers one question
+    // at a time. The popup only collects. The transcript lives on the plan and
+    // the NEXT send-round rebuilds the deck from it. State on the plan:
+    // interview = { state: idle|asking|done, max, turns:[{id,q,a}],
+    // next:{id,q}|null }. Every user action is an /ask with cardId
+    // "__interview__"; the agent replies by writing plan.json, which SSE (or the
+    // poll fallback) brings back through ivSync().
+    const IV_CARD = "__interview__";
+    const $iv = (id) => document.getElementById(id);
+    const ivBtn = $iv("grillPlan");
+    const ivStatus = $iv("grillPlanState");
+    const ivSteps = $iv("ivSteps");
+    const ov = {
+      root: $iv("ivOverlay"), prog: $iv("ivProg"), tr: $iv("ivTranscript"),
+      cur: $iv("ivCurrent"), q: $iv("ivQ"), a: $iv("ivA"), next: $iv("ivNext"),
+      enough: $iv("ivEnough"), waitRow: $iv("ivWaitRow"), waitTxt: $iv("ivWaitTxt"),
+      pause: $iv("ivPause")
+    };
+    const iv = { awaiting: null, optimistic: null, open: false };
+    const ivData = (plan) => (plan && plan.interview) || { state: "idle", turns: [], next: null };
+    const ivEsc = (s) => String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const ivPost = (id, text) => fetch("/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, cardId: IV_CARD, text })
+    });
+    const draftKey = (tid) => store2.lsKey + ":iv:" + tid;
+    const ivSetStep = (n) => {
+      if (!ivSteps) return;
+      [...ivSteps.children].forEach((li, i) => {
+        li.classList.toggle("on", i === n);
+        li.classList.toggle("done", i < n);
+      });
+    };
+    const ivShow = (cls, html) => {
+      if (!ivStatus) return;
+      ivStatus.hidden = false;
+      ivStatus.className = "iv-status " + cls;
+      ivStatus.innerHTML = html;
+    };
+    const ivHideStatus = () => { if (ivStatus) ivStatus.hidden = true; };
+    const ivOpen = () => { if (ov.root) { ov.root.hidden = false; iv.open = true; } };
+    const ivClose = () => { if (ov.root) { ov.root.hidden = true; iv.open = false; } };
+    const ivPane = (which) => {
+      ["cur", "waitRow"].forEach((k) => { if (ov[k]) ov[k].hidden = k !== which; });
+    };
+    const ivTurnsHtml = (turns) => turns.map((t) =>
+      `<div class="iv-turn"><div class="tq">${ivEsc(t.q)}</div><div class="ta">${ivEsc(t.a)}</div></div>`
+    ).join("");
+    const ivRenderTranscript = (turns) => {
+      if (!ov.tr) return;
+      const all = turns.slice();
+      if (iv.optimistic && !all.some((t) => t.id === iv.optimistic.id)) all.push(iv.optimistic);
+      ov.tr.innerHTML = ivTurnsHtml(all);
+      ov.tr.style.display = all.length ? "" : "none";
+    };
+    const ivLabel = (txt) => { const l = ivBtn && ivBtn.querySelector(".iv-lbl"); if (l) l.textContent = txt; };
+    function ivSync(plan) {
+      if (!ivBtn || !ov.root) return;
+      const d = ivData(plan);
+      const turns = d.turns || [];
+      const n = turns.length;
+      const max = d.max || 8;
+      const state = d.state || "idle";
+      ivBtn.disabled = false;
+      if (state === "idle") {
+        ivLabel("Interview me & redesign");
+        ivSetStep(-1);
+        if (!iv.open) ivHideStatus();
+        return;
+      }
+      if (state === "asking") {
+        ivLabel("Resume the interview");
+        ivSetStep(1);
+        if (!iv.open) {
+          ivShow("sent", `Interview paused after ${n} answer${n === 1 ? "" : "s"}. ` +
+            `<button type="button" class="iv-jump" id="ivResume">Resume ▸</button>`);
+          return;
+        }
+        ivRenderTranscript(turns);
+        const fresh = d.next && d.next.id !== iv.awaiting;
+        if (fresh) {
+          iv.awaiting = null;
+          iv.optimistic = null;
+          ivRenderTranscript(turns);
+          ov.q.innerHTML = "";
+          ov.q.appendChild(mdEl2(null, d.next.q || ""));
+          let draft = "";
+          try { draft = localStorage.getItem(draftKey(d.next.id)) || ""; } catch { /* no storage */ }
+          ov.a.value = draft;
+          ov.prog.textContent = `Question ${n + 1} of about ${max}`;
+          ivPane("cur");
+          setTimeout(() => ov.a.focus(), 30);
+        } else {
+          ov.prog.textContent = n ? `${n} answered` : "Starting";
+          ov.waitTxt.textContent = n ? "thinking about your answer…" : "getting the first question…";
+          ivPane("waitRow");
+        }
+        return;
+      }
+      if (state === "done") {
+        iv.awaiting = null;
+        iv.optimistic = null;
+        ivClose();
+        ivLabel("Ask me more");
+        const applied = d.appliedRound != null && d.appliedRound >= (plan.round || 1);
+        ivSetStep(applied ? 3 : 2);
+        ivShow("landed", (applied
+          ? `✓ This deck was rebuilt from your ${n} interview answer${n === 1 ? "" : "s"}. `
+          : `✓ Interview done: ${n} answer${n === 1 ? "" : "s"}, saved on the plan. ` +
+            `Press <b>Send to agent</b> and the next round is rebuilt from them. `) +
+          `<button type="button" class="iv-tr-toggle" id="ivTr">Show transcript</button>` +
+          `<div class="iv-tr-body" id="ivTrBody" hidden>${ivTurnsHtml(turns)}</div>`);
+      }
+    }
+    if (ivStatus) ivStatus.addEventListener("click", (e) => {
+      const t = e.target;
+      if (!t || !t.id) return;
+      if (t.id === "ivResume") { ivOpen(); ivSync(store2.plan); }
+      if (t.id === "ivTr") {
+        const b = $iv("ivTrBody");
+        if (b) { b.hidden = !b.hidden; t.textContent = b.hidden ? "Show transcript" : "Hide transcript"; }
+      }
+    });
+    if (ivBtn) ivBtn.addEventListener("click", () => {
+      const d = ivData(store2.plan);
+      if (d.state === "asking") { ivOpen(); ivSync(store2.plan); return; }
+      const more = d.state === "done";
+      ivBtn.disabled = true;
+      iv.awaiting = more ? "__more__" : "__start__";
+      iv.optimistic = null;
+      ivOpen();
+      ivRenderTranscript(d.turns || []);
+      ov.prog.textContent = more ? `${(d.turns || []).length} answered` : "Starting";
+      ov.waitTxt.textContent = more ? "thinking of the next question…" : "getting the first question…";
+      ivPane("waitRow");
+      ivSetStep(0);
+      ivPost((more ? "iv-more-" : "iv-start-") + Date.now(), more ? "[INTERVIEW MORE]" : "[INTERVIEW START]").catch(() => {
+        ivClose();
+        ivBtn.disabled = false;
+        ivShow("err", `Couldn't reach the agent. Use <b>Send to agent</b> at the bottom instead.`);
+      });
+    });
+    const ivSubmitAnswer = () => {
+      const d = ivData(store2.plan);
+      if (!d.next) return;
+      const a = ov.a.value.trim();
+      if (!a) { ov.a.focus(); return; }
+      iv.awaiting = d.next.id;
+      iv.optimistic = { id: d.next.id, q: d.next.q, a };
+      try { localStorage.removeItem(draftKey(d.next.id)); } catch { /* no storage */ }
+      ivRenderTranscript(d.turns || []);
+      ov.waitTxt.textContent = "thinking about your answer…";
+      ivPane("waitRow");
+      ivPost(d.next.id, a).catch(() => {
+        iv.awaiting = null;
+        iv.optimistic = null;
+        ov.a.value = a;
+        ivPane("cur");
+      });
+    };
+    const ivDone = () => {
+      const d = ivData(store2.plan);
+      const pending = ov.cur && !ov.cur.hidden ? ov.a.value.trim() : "";
+      let text = "[INTERVIEW DONE]";
+      if (pending && d.next) {
+        iv.optimistic = { id: d.next.id, q: d.next.q, a: pending };
+        text += `\n\nLast answer (to: ${d.next.q})\n${pending}`;
+        try { localStorage.removeItem(draftKey(d.next.id)); } catch { /* no storage */ }
+      }
+      iv.awaiting = "__done__";
+      ivClose();
+      ivBtn.disabled = true;
+      ivShow("sent", `<span class="iv-spin"></span>Wrapping up the interview…`);
+      ivPost("iv-done-" + Date.now(), text).catch(() => {
+        ivBtn.disabled = false;
+        ivOpen();
+        ivPane(d.next ? "cur" : "waitRow");
+      });
+    };
+    if (ov.next) ov.next.addEventListener("click", ivSubmitAnswer);
+    if (ov.enough) ov.enough.addEventListener("click", ivDone);
+    if (ov.pause) ov.pause.addEventListener("click", () => { ivClose(); ivSync(store2.plan); });
+    if (ov.a) {
+      ov.a.addEventListener("input", () => {
+        const d = ivData(store2.plan);
+        if (d.next) { try { localStorage.setItem(draftKey(d.next.id), ov.a.value); } catch { /* no storage */ } }
+      });
+      ov.a.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); ivSubmitAnswer(); }
       });
     }
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && iv.open) { ivClose(); ivSync(store2.plan); }
+    });
+    ivSync(store2.plan);
     return { startLive, reconcile };
   };
 

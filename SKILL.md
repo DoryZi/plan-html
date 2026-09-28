@@ -114,6 +114,15 @@ contained tasks. The user can drop any boundary with its "Not needed" button.
     `grill[]` (each `{id, q, answer}`) — read them and tighten the intent (and
     its `verify`) next round. Soft-gated: unanswered grill questions are
     surfaced and counted but do NOT block Finalize.
+- **`discovered[]` — what exploring turned up (optional, shown after the
+  intents).** A finding from Stage 2 that changes or informs the plan: existing
+  code that already does part of this, a constraint you didn't know about, an
+  assumption that turned out wrong. Purely informational — no approve/reject,
+  nothing to decide — so it never gates Finalize. Each card carries `finding`
+  (what you found), and optionally `impact` (why it changes the plan) and
+  `source` (where you found it, e.g. a file path). Only add one when it
+  actually changes how the user should read the rest of the plan — not a
+  running log of every file you opened.
 - **`boundaries[]` — the fence (optional, shown after the intents).** What's in
   scope, what's out of scope, and what must not be touched. One boundary per
   card, written as a testable statement. When present, boundaries gate
@@ -257,15 +266,69 @@ of truth; the page is a live view of it (SSE), and you keep it current.
    - the full round object on **Send to agent** / **Finalize plan**.
    - `{"action":"timeout",...}` if the idle timeout hits.
 
-   **Grill request.** The intents section has an "Interview me to sharpen
-   these intents" button. Clicking it sends an `ask` with
-   `cardId:"__intents__"` and a `text` starting `[GRILL REQUEST]`. When you see
-   it: write pointed `agentQuestions[]` onto the fuzzy/ambiguous intents (not
-   every intent — only ones that genuinely need clarifying), bump `rev`, and
-   write `plan.json`. The questions stream into the cards over SSE; the user
-   answers inline and the answers come back as `grill[]` (see `agentQuestions`
-   under intents). This is grilling on demand — the user pulls it when they
-   want it, instead of you front-loading questions on every intent.
+   **The interview (discovery only).** Above the intents sits a panel with
+   one button: "Interview me & redesign". It opens a popup in which **you
+   ask the user questions to understand what they are building and why**,
+   one at a time. The popup only collects; it never rebuilds. It is NOT a
+   review of your own assumptions ("I assumed X, confirm?"), and it is NOT
+   reading the cards back to them. Those are your problems to solve once you
+   understand them; they become decision cards in the rebuilt deck.
+
+   State lives on the plan and you are the only writer of it:
+
+   ```jsonc
+   "interview": {
+     "state": "asking",          // idle | asking | done
+     "max": 8,                   // rough cap shown to the user ("of about 8")
+     "turns": [ {"id":"iv-1","q":"…","a":"…"} ],   // answered so far, in order
+     "next": {"id":"iv-2","q":"…"},                 // the question on screen, or null
+     "appliedRound": 2           // set when a round was rebuilt from these turns
+   }
+   ```
+
+   Every user action arrives as an `ask` with `cardId:"__interview__"`:
+
+   | `text` | Meaning | You do |
+   |---|---|---|
+   | `[INTERVIEW START]` | user pressed the button | set `state:"asking"`, `turns:[]`, write the first question into `next` |
+   | anything else, with `id` = the current `next.id` | the answer to that question | append `{id,q,a}` to `turns`; write the following question into `next`. When you could already write the goal in their words, make the next question a wrap-up ("Anything else I should know before I redesign?") rather than stopping on your own |
+   | `[INTERVIEW MORE]` | user wants more questions after `done` | set `state:"asking"` and write another `next`; keep `turns` |
+   | `[INTERVIEW DONE]` (optionally followed by "Last answer (to: …)" and text) | user closed the interview | append the last answer if present, set `next:null`, `state:"done"`, write. **Do not rebuild now.** |
+
+   After each of these: bump `rev`, write `plan.json`. The popup follows the
+   plan over SSE; nothing else delivers your question.
+
+   **How to ask.** One question at a time, plain words, each shaped by the
+   previous answer. Dig into what they actually said; do not run a fixed
+   list. Cover, in whatever order the conversation goes: what they want to
+   be able to say or do when this is done; who it is for and who has to be
+   convinced; what "done" and "wrong" look like; what they have already
+   tried; what they will not spend (time, money, attention); what worries
+   them. Around `max` questions, ask the wrap-up and let them press Done.
+
+   **The rebuild happens on the next round, not in the popup.** When a
+   `send-round` arrives and `plan.interview.state == "done"` with
+   `appliedRound` missing or lower than the current round, regenerate the
+   deck from the transcript plus the round's answers, not from the previous
+   draft: rewrite `goal` and `summary` in their words; rewrite `intents[]`
+   (each with a real `verify`); redraw `boundaries[]`; replace `decisions[]`
+   with the forks the interview exposed (this is where your assumptions go,
+   as `needs-you` cards); regenerate `steps[]`, `finalVerify[]` and the
+   plan-level diagram. Bump `round`. Give changed cards **new ids** so stale
+   answers do not attach to them; keep ids only for cards that genuinely
+   survived unchanged, and keep any user-edited or user-added card as the
+   user set it. Keep `interview.turns`, set `appliedRound` to the new round.
+   Say in the one-line round status that the plan was rebuilt from the
+   interview.
+
+   **Serve with a long timeout** when an interview is likely
+   (`--timeout 21600`): the default 1800 s is a total wall-clock limit, not
+   idle, and an interview can outlast it.
+
+   Legacy: an `ask` with `cardId:"__intents__"` and `[GRILL REQUEST]`, or
+   `cardId:"__plan__"` and `[REDESIGN REQUEST]` (older decks), means: write
+   pointed `agentQuestions[]` onto fuzzy intents, bump `rev`, write. No
+   rebuild.
 
    **Optional public tunnel (on demand).** The deck binds `127.0.0.1` by
    default. If the user asks to share it / open it on their phone / "open a
@@ -463,6 +526,18 @@ of truth; the page is a live view of it (SSE), and you keep it current.
         { "id": "scope", "q": "Does *every* answer include drag-order, or just card picks? (markdown ok)" }
       ],                                           // answers come back as grill:[{id,q,answer}] on the round
       "thread": [ {"role":"user","text":"…"}, {"role":"agent","text":"…"} ]  // Q&A history, optional
+    }
+  ],
+
+  "discovered": [                                // optional — findings from exploring, shown after intents
+    {
+      "id": "found-ratelimiter",
+      "title": "There's already a rate limiter",
+      "summary": "middleware/throttle.py already does per-user limits",  // optional, shown on collapsed card
+      "finding": "middleware/throttle.py already implements a token-bucket limiter per user. (markdown ok)",
+      "impact": "The new endpoint should reuse it instead of adding a second one.",  // optional, markdown ok
+      "source": "middleware/throttle.py",          // optional — where you found it
+      "thread": []                                  // Q&A history, optional
     }
   ],
 
