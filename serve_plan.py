@@ -47,6 +47,7 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.parse
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -56,6 +57,8 @@ logging.basicConfig(
     level=logging.INFO,
     format="[plan-html] %(message)s",
 )
+IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp"}
+
 log = logging.getLogger("plan-html")
 
 TEMPLATE = Path(__file__).resolve().parent / "templates" / "deck.html"
@@ -318,9 +321,33 @@ def build_handler(html_path: Path, plan_path: Path, answers_path: Path,
                     with clients_lock:
                         if self.wfile in sse_clients:
                             sse_clients.remove(self.wfile)
+            elif self.path.startswith("/files/"):
+                self._send_file()
             else:
                 self.send_response(404)
                 self.end_headers()
+
+        def _send_file(self) -> None:
+            # Images a plan shows on its cards (`![alt](files/x.png)`): only image files
+            # from the `files/` folder next to the plan, never anything outside it.
+            base = (plan_path.parent / "files").resolve()
+            name = urllib.parse.unquote(self.path.split("?", 1)[0][len("/files/"):])
+            try:
+                target = (base / name).resolve()
+            except (ValueError, OSError):  # a NUL byte or a broken path: not found, not a crash
+                target = base
+            kind = IMAGE_TYPES.get(target.suffix.lower())
+            if base not in target.parents or kind is None or not target.is_file():
+                self.send_response(404)
+                self.end_headers()
+                return
+            body = target.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", kind)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            self.wfile.write(body)
 
         def do_POST(self) -> None:
             if self.path == "/save":

@@ -116,3 +116,32 @@ def test_unknown_path_404(server):
         assert False, "expected 404"
     except urllib.error.HTTPError as e:
         assert e.code == 404
+
+
+PNG = bytes.fromhex(
+    "89504e470d0a1a0a0000000d4948445200000001000000010806000000"
+    "1f15c4890000000d49444154789c6360000002000154a24f5d0000000049454e44ae426082"
+)
+
+
+def _get_raw(url: str):
+    import urllib.error
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(url, timeout=5) as r:
+            return r.status, r.headers.get("Content-Type"), r.read()
+    except urllib.error.HTTPError as err:
+        return err.code, None, b""
+
+
+def test_files_route_serves_images_next_to_the_plan_only(server):
+    files = server.plan_path.parent / "files"
+    files.mkdir()
+    (files / "shot.png").write_bytes(PNG)
+    (files / "notes.txt").write_text("not an image")
+    status, kind, body = _get_raw(server.url("/files/shot.png"))
+    assert (status, kind, body) == (200, "image/png", PNG)
+    for path in ("/files/notes.txt", "/files/../plan.json", "/files/%2e%2e/plan.json", "/files/missing.png",
+                 "/files/a%00.png"):
+        assert _get_raw(server.url(path))[0] == 404, path

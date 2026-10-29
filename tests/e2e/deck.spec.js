@@ -418,3 +418,58 @@ test("discovered cards never gate finalize and ride back in the round with their
   expect(disc.kind).toBe("discovered");
   expect(disc.draft.finding).toContain("existing code already does this");
 });
+
+test("fix deck: card images from files/, a bulk Fix all button, empty sections hidden", async ({ page, deck }) => {
+  const { mkdirSync, writeFileSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  mkdirSync(join(deck.dir, "files"));
+  writeFileSync(join(deck.dir, "files", "shot.png"), Buffer.from(
+    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000002000154a24f5d0000000049454e44ae426082", "hex"));
+  const opts = ["Fix now", "Next cycle", "Drop"];
+  deck.writePlan({
+    title: "Fix cycle", slug: "fix", round: 1, rev: 5, hideEmpty: true, goal: "Pick what gets fixed now",
+    bulk: [{ label: "Fix all", choice: "Fix now" }], intents: [], steps: [], finalVerify: [],
+    decisions: [
+      { id: "item-1", title: "Chip wraps", status: "needs-you", summary: "Broken", building: "![Chip](files/shot.png)", options: opts },
+      { id: "item-2", title: "Logo hidden", status: "needs-you", summary: "Polish", building: "no ![x](files/../plan.json) here", options: opts },
+    ],
+  });
+  await page.goto(deck.url);
+  await expect(page.locator("#title")).toHaveText("Fix cycle");
+  await page.locator("#expandAll").click();
+  const img = page.locator("#decisions img.md-img");
+  await expect(img).toHaveCount(1);
+  await expect.poll(() => img.evaluate((i) => i.naturalWidth)).toBe(1);
+  await expect(page.locator("#intentsWrap")).toBeHidden();
+  await expect(page.locator("#stepsWrap")).toBeHidden();
+  await expect(page.locator("#finalVerifyWrap")).toBeHidden();
+  await page.getByRole("button", { name: "Fix all (2)" }).click();
+  // the cards already drawn show the pick at once, not only after a reload
+  await expect(page.locator("#decisions .card .opt.sel", { hasText: "Fix now" })).toHaveCount(2);
+  await expect.poll(() => {
+    const a = deck.readAnswers();
+    const pick = (id) => (a && a.answers && a.answers[id] ? a.answers[id].choice : null);
+    return [pick("item-1"), pick("item-2")].join(",");
+  }, { timeout: 5000 }).toBe("Fix now,Fix now");
+});
+
+test("markdown images and links cannot break out of their attributes", async ({ page, deck }) => {
+  const { mkdirSync, writeFileSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  mkdirSync(join(deck.dir, "files"));
+  writeFileSync(join(deck.dir, "files", "shot.png"), Buffer.from(
+    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000002000154a24f5d0000000049454e44ae426082", "hex"));
+  deck.writePlan({
+    title: "Escapes", slug: "esc", round: 1, rev: 7, hideEmpty: true, goal: "x", intents: [], steps: [], finalVerify: [],
+    decisions: [{ id: "d1", title: "Quotes", status: "needs-you", summary: "s", options: ["A"],
+      building: '![x" onerror="window.__pwned=1](files/shot.png) and [link](https://example.com/"onmouseover="window.__pwned2=1)' }],
+  });
+  await page.goto(deck.url);
+  await page.locator("#expandAll").click();
+  const img = page.locator("#decisions img.md-img");
+  await expect(img).toHaveCount(1);
+  await expect(img).toHaveAttribute("alt", 'x" onerror="window.__pwned=1');
+  expect(await img.getAttribute("onerror")).toBeNull();
+  await expect(page.locator("#decisions a[onmouseover]")).toHaveCount(0);
+  expect(await page.evaluate(() => [window.__pwned, window.__pwned2])).toEqual([null, null].map(() => undefined));
+});

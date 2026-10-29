@@ -152,6 +152,7 @@
   .prog-row .txt { margin-top:0; flex:1; }
   /* markdown tables in card bodies and threads */
   .md table { border-collapse:collapse; margin:11px 0; font-size:13px; max-width:100%; }
+  .md img.md-img { display:block; max-width:100%; max-height:420px; border-radius:10px; border:1px solid var(--line); margin:8px 0; cursor:zoom-in; }
   .md th, .md td { border:1px solid var(--line); padding:6px 10px; text-align:left;
     vertical-align:top; }
   .md th { background:var(--panel2); font-weight:700; color:var(--ink); white-space:nowrap; }
@@ -848,6 +849,7 @@
     <div class="savestate" id="savestate"></div>
     <button class="btn secondary theme-btn" id="themeBtn" type="button" title="Toggle light/dark">☀️</button>
     <button class="btn secondary" id="expandAll" type="button">Expand all</button>
+    <span id="bulkBtns"></span>
     <button class="btn" id="sendRound" type="button" disabled>Send to agent</button>
     <button class="btn final" id="finalize" type="button" disabled>Finalize plan</button>
   </div>
@@ -875,8 +877,13 @@
     s = s.replace(/`([^`\n]+)`/g, "<code>$1</code>");
     s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
     s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+    // Card images: `![alt](files/name.png)`, served by serve_plan.py from the
+    // plan's files/ folder only (no other paths, no "..").
+    // escapeHtml leaves quotes alone, so quote the alt text here: it lands inside an attribute.
+    s = s.replace(/!\[([^\]]*)\]\((files\/[\w.\-/]+)\)/g, (m, alt, src) => src.includes("..") ? m
+      : `<a href="${src}" target="_blank" rel="noopener"><img class="md-img" src="${src}" alt="${alt.replace(/"/g, "&quot;").replace(/'/g, "&#39;")}" loading="lazy"></a>`);
     s = s.replace(
-      /\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+      /\[([^\]]+)\]\((https?:\/\/[^)\s"']+)\)/g,
       '<a href="$2" target="_blank" rel="noopener">$1</a>'
     );
     // GFM tables: a header row, a |---|---| delimiter row, then body rows.
@@ -1823,11 +1830,11 @@
       document.getElementById("followupBanner").classList.toggle("show", Boolean(PLAN2.followUp));
       document.getElementById("finalize").textContent = PLAN2.followUp ? "Resume build ▶" : "Finalize plan";
       const boundaries = [...PLAN2.boundaries || [], ...store2.added.boundaries];
-      document.getElementById("boundariesWrap").style.display = "";
+      document.getElementById("boundariesWrap").style.display = PLAN2.hideEmpty && !boundaries.length ? "none" : "";
       boundaries.forEach((d, i) => buildCard(app2, d, i, "boundary", document.getElementById("boundaries")));
       addBtn("boundary", "boundaries", document.getElementById("boundaries"), "boundary");
       const intents = [...PLAN2.intents || [], ...store2.added.intents];
-      document.getElementById("intentsWrap").style.display = "";
+      document.getElementById("intentsWrap").style.display = PLAN2.hideEmpty && !intents.length ? "none" : "";
       intents.forEach((d, i) => buildCard(app2, d, i, "intent", document.getElementById("intents")));
       addBtn("intent", "intents", document.getElementById("intents"), "intent");
       // discovered[] is agent-authored only (no "+ Add" — it's a record of what
@@ -1855,6 +1862,21 @@
       plainDecisions.forEach((d, i) => buildCard(app2, d, i, "decision", document.getElementById("decisions")));
       addBtn("decision", "decisions", document.getElementById("decisions"), "decision");
       DRAG_CONTAINERS.forEach(setupDrag);
+      // plan.bulk: one button per entry picks that option on every card that offers it (e.g. Fix all).
+      const bulk = document.getElementById("bulkBtns");
+      bulk.replaceChildren();
+      (PLAN2.bulk || []).forEach((b) => {
+        const targets = [...(PLAN2.decisions || []), ...store2.added.decisions]
+          .filter((d) => (d.options || []).includes(b.choice));
+        if (!targets.length) return;
+        const btn = el2("button", "btn secondary", `${b.label} (${targets.length})`);
+        btn.type = "button";
+        btn.addEventListener("click", () => {
+          targets.forEach((d) => { store2.ans(d.id).choice = b.choice; });
+          app2.touched();
+        });
+        bulk.appendChild(btn);
+      });
       document.getElementById("diagramWrap").style.display = PLAN2.diagramSvg ? "" : "none";
       if (PLAN2.diagramSvg) {
         const dg = document.getElementById("diagram");
@@ -1865,7 +1887,7 @@
          ${PLAN2.diagramSvg}</svg>`;
         zoomableDiagram2(dg, "Architecture & flow");
       }
-      document.getElementById("stepsWrap").style.display = "";
+      document.getElementById("stepsWrap").style.display = PLAN2.hideEmpty && !(PLAN2.steps || []).length && !store2.added.steps.length ? "none" : "";
       const stepsWrap = document.getElementById("steps");
       (PLAN2.steps || []).forEach((s, i) => {
         if (!s.id) s.id = `step-${i}`;
@@ -1885,7 +1907,7 @@
       if (store2.fvState === null) {
         store2.fvState = (PLAN2.finalVerify || []).map((v) => ({ ...v }));
       }
-      document.getElementById("finalVerifyWrap").style.display = "";
+      document.getElementById("finalVerifyWrap").style.display = PLAN2.hideEmpty && !(PLAN2.finalVerify || []).length ? "none" : "";
       const tb = document.getElementById("fvRows");
       const intentOpts = [...PLAN2.intents || [], ...store2.added.intents];
       const fvInput = (val, cls, onInput, placeholder) => {
