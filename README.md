@@ -33,11 +33,10 @@ dependencies, MIT.
 
 ## Try it in one minute
 
-In Claude Code:
+In Claude Code (2.1.275 or later; older versions use the two lines under [Install](#install)):
 
 ```text
-/plugin marketplace add DoryZi/plan-html
-/plugin install plan-html
+/plugin install plan-html --marketplace DoryZi/plan-html
 ```
 
 Restart Claude Code, then:
@@ -49,7 +48,7 @@ Restart Claude Code, then:
 The plan opens in your browser. Using Codex or Pi, or want a plain clone? See
 [Install](#install).
 
-🎬 [One minute intro](https://github.com/DoryZi/plan-html/releases/download/v0.3.0/plan-html-intro.mp4) · ▶ [Full demo on YouTube](https://youtu.be/cFwvulWoTE4) · 📖 [Why I built it](https://doryzidon.com/blog/stop-approving-plans-you-didnt-read)
+▶ [Full demo on YouTube](https://youtu.be/cFwvulWoTE4) · 📖 [Why I built it](https://doryzidon.com/blog/stop-approving-plans-you-didnt-read)
 
 ## What it looks like
 

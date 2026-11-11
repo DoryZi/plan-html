@@ -12,7 +12,10 @@
     "orchestration",
     "loops"
   ],
-  "author": "Dory Zidon",
+  "author": {
+    "name": "Dory Zidon",
+    "url": "https://doryzidon.com"
+  },
   "homepage": "https://doryzidon.com/blog/stop-approving-plans-you-didnt-read",
   "repository": "https://github.com/DoryZi/plan-html",
   "license": "MIT"
