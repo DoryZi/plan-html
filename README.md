@@ -1,39 +1,35 @@
 # plan-html
 
-**Align with your agent before it builds.**
+**See how it will work before your agent spends 12 hours building it.**
+
+![A 40 second walk through a deck: mock screens, picking an option, answering cards, the progress chip and the themes](docs/img/demo.gif)
+
+plan-html turns your coding agent's plan into a page in your browser. You click
+through mock screens of the app, answer the open questions and fix what it got
+wrong, all before it writes any code.
 
 > "As Claude takes on more, I'd noticed I was reading plans less closely, and I
 > wanted a way to stay engaged with its choices rather than just hand them off."
 >
 > Thariq Shihipar, Anthropic, in [The Unreasonable Effectiveness of HTML](https://claude.com/blog/using-claude-code-the-unreasonable-effectiveness-of-html)
 
-plan-html is that idea, built for planning. Your agent's plan opens as a page in
-your browser, not a wall of text, and you settle four things before any code is
-written:
+⭐ **If this is useful to you, please star the repo.** It is how other people find it.
 
-| | |
-|---|---|
-| **Intent** | What you actually want. The agent writes down what it understood, and you correct it in your own words. |
-| **Boundaries** | What it must respect and what it must not touch. |
-| **Decisions** | The forks in the design, with options and tradeoffs. Decide them yourself, or leave any of them to the agent. |
-| **Steps and the finish line** | The workflow it will follow, and the checks that prove the work is done. |
+## Try it
 
-A vague idea goes in. A concrete plan you can run again comes out.
+**Just want to look?** Open a ready-made plan. No agent and nothing to install
+beyond Python 3.10:
 
-**Why it matters.** Agents now run for hours. Get aligned in the first few
-minutes and you can send one off on a 12 hour build and get back what you
-actually wanted. It is still iterative development. plan-html makes each
-iteration better: a round is a few clicks and a few words, and you can question
-any single card without rereading the whole plan.
+```bash
+git clone https://github.com/DoryZi/plan-html && cd plan-html
+python3 serve_plan.py --plan examples/mocks/plan.json
+```
 
-Works with **Claude Code**, **Codex** and **Pi**. Runs on your machine, no
-dependencies, MIT.
+It opens in your browser. Click the mock screens, pick an option, answer a few
+cards.
 
-![A 40 second walk through a deck: mock screens, picking an option, answering cards, the progress chip and the themes](docs/img/demo.gif)
-
-## Try it in one minute
-
-In Claude Code (2.1.275 or later; older versions use the two lines under [Install](#install)):
+**With your agent.** In Claude Code (2.1.275 or later; older versions use the
+two lines under [Install](#install)):
 
 ```text
 /plugin install plan-html --marketplace DoryZi/plan-html
@@ -45,44 +41,43 @@ Restart Claude Code, then:
 /plan-html add a dark mode toggle to the settings page
 ```
 
-The plan opens in your browser. Using Codex or Pi, or want a plain clone? See
-[Install](#install).
+Using Codex or Pi? See [Install](#install).
 
-▶ [Full demo on YouTube](https://youtu.be/cFwvulWoTE4) · 📖 [Why I built it](https://doryzidon.com/blog/stop-approving-plans-you-didnt-read)
+## Play with the app before it exists
 
-## What it looks like
+![A design question in the deck: three options, each shown as a strip of mock screens with Try it and Pick buttons](docs/img/mock-screens.png)
 
-![Intent cards at the top of the deck](docs/img/intents.png)
+When the UI matters, the agent draws 2 or 3 versions as mock screens. Open any
+of them full size, click through it, pin a note to a button, and pick the one
+you want. You find out it is wrong in a minute, not after the build.
+
+## What you settle before it builds
+
+| | |
+|---|---|
+| **Intent** | What you actually want. The agent writes down what it understood, and you correct it. |
+| **Boundaries** | What it must respect and what it must not touch. |
+| **Decisions** | The forks in the design. Decide them yourself, or leave any of them to the agent. |
+| **Steps and the finish line** | The workflow it will follow, and the checks that prove the work is done. |
 
 | | |
 |---|---|
 | ![A decision card expanded: options, tradeoffs, and a live chat with the agent](docs/img/decision-expanded.png) | ![The finish line: a verification loop and acceptance-criteria table](docs/img/finish-line.png) |
-| _A decision card: options, tradeoffs, and a live back-and-forth with the agent right inside the card._ | _The finish line: a verification loop and the acceptance criteria that prove the plan is done._ |
+| _A decision card: options, tradeoffs, and a chat with the agent inside the card._ | _The finish line: the checks that prove the plan is done._ |
 
-## Features
+It is still iterative development. Each round is just a few clicks, and once you
+finalize you can send the agent off on a long build and get back what you asked
+for.
 
-- **Design in the same round**: when the UI matters, a question shows 2 or 3 options as strips of mock screens; open any of them full size, click through it, and pin notes to its elements.
-- **Easy to scan**: sections fold from their headings, a menu lists the sections with what is left in each, answered cards fold away, and "Show what's left" hides everything you already answered.
-- **Reshapeable**: add, edit, strike and drag-reorder cards, steps, and finish-line rows; your changes are authoritative and ride back to the agent.
-- **Live answers**: ask a card a question and the agent's reply streams back into it (SSE), with the answer written into the plan so it survives a dropped connection.
-- **Works remotely**: serve on your LAN or behind a tunnel; an adaptive polling fallback keeps updates flowing even through proxies that buffer SSE.
-- **Finalize on your terms**: finalize early and let the agent decide what's unanswered (with a confirm), or loop until everything's pinned.
-- **Autosaves everything**: every answer is persisted next to the plan; an interrupted session loses nothing.
-- **Zero dependencies to run**: stdlib Python server, single offline `deck.html`. No build step, no CDN.
+## Also in the box
 
-## What's here
+- **Answer your way.** Click a button or type your own words. Ask a question on any card and the agent replies in place.
+- **Change the plan yourself.** Add, edit, remove and reorder cards and steps.
+- **Nothing gets lost.** Every answer autosaves, so an interrupted session picks up where it stopped.
+- **Works from your phone.** Serve it on your network or through a tunnel.
+- **Nothing to set up.** Plain Python and one offline HTML file. No build step.
 
-| Path | What it is |
-|------|------------|
-| `serve_plan.py` | The server. Renders `plan.json` into the deck, serves it on `127.0.0.1`, autosaves answers, streams plan changes over SSE (`--live`), and prints each round to stdout. Zero dependencies (stdlib only). |
-| `templates/deck.html` | The deck: a single self-contained, offline HTML file, hand-edited. Its JavaScript is organized into a few labeled top-level `<script>` blocks that run in document order and share one global scope. No build step, no modules, no CDN. |
-| `scripts/lint-deck.js` | Extracts the deck's inline `<script>` blocks into a temp file and runs ESLint over them. |
-| `templates/proto-kit.js` | The small script a mock or prototype screen loads so the deck can open it full size, step through it and pin notes to it. |
-| `finalize_plan.py` | Writes the final `plan.md` (every card, its answer and discussion, the steps and checks) when you finalize. |
-| `cycles.py` | Makes and lists the dated cycle folders (`cycles/YYYY-MM-DD-NN-<slug>/`) plans are kept in. |
-| `check_prototype.py` | Clicks through a plan's mock screens or prototype in a headless browser and reports dead controls (needs `pip install playwright`). |
-| `examples/` | Two worked plans: `mocks/` (a design question answered with mock screens) and `prototype/` (a clickable prototype). |
-| `tests/` | pytest: server unit and HTTP tests, and browser tests of the deck on the examples. `tests/e2e`: Playwright (JS) browser tests. |
+▶ [Full demo on YouTube](https://youtu.be/cFwvulWoTE4) · 📖 [Why I built it](https://doryzidon.com/blog/stop-approving-plans-you-didnt-read)
 
 ## Install
 
@@ -124,9 +119,9 @@ git clone https://github.com/DoryZi/plan-html ~/.pi/agent/skills/plan-html    # 
 tooling, not to use the skill.)
 
 > Want to drive the server by hand, without an agent? Skip straight to
-> [Quick start](#quick-start).
+> [Run the server by hand](#run-the-server-by-hand).
 
-## Quick start
+## Run the server by hand
 
 ```bash
 # serve a plan (no Node needed to run: the deck is a single offline HTML file)
@@ -150,7 +145,25 @@ buffer event streams (Cloudflare quick-tunnels do this), so the deck stays in
 sync over a tunnel even when the live push can't get through. Pass a fixed
 `--port` when tunnelling so the public URL survives a server restart.
 
-## Develop
+<details>
+<summary><b>What is in the repo</b></summary>
+
+| Path | What it is |
+|------|------------|
+| `serve_plan.py` | The server. Renders `plan.json` into the deck, serves it on `127.0.0.1`, autosaves answers, streams plan changes over SSE (`--live`), and prints each round to stdout. Zero dependencies (stdlib only). |
+| `templates/deck.html` | The deck: a single self-contained, offline HTML file, hand-edited. Its JavaScript is organized into a few labeled top-level `<script>` blocks that run in document order and share one global scope. No build step, no modules, no CDN. |
+| `scripts/lint-deck.js` | Extracts the deck's inline `<script>` blocks into a temp file and runs ESLint over them. |
+| `templates/proto-kit.js` | The small script a mock or prototype screen loads so the deck can open it full size, step through it and pin notes to it. |
+| `finalize_plan.py` | Writes the final `plan.md` (every card, its answer and discussion, the steps and checks) when you finalize. |
+| `cycles.py` | Makes and lists the dated cycle folders (`cycles/YYYY-MM-DD-NN-<slug>/`) plans are kept in. |
+| `check_prototype.py` | Clicks through a plan's mock screens or prototype in a headless browser and reports dead controls (needs `pip install playwright`). |
+| `examples/` | Two worked plans: `mocks/` (a design question answered with mock screens) and `prototype/` (a clickable prototype). |
+| `tests/` | pytest: server unit and HTTP tests, and browser tests of the deck on the examples. `tests/e2e`: Playwright (JS) browser tests. |
+
+</details>
+
+<details>
+<summary><b>Develop and test</b></summary>
 
 The deck is a single hand-edited offline HTML file (no CDN, opens with
 `file://`). Edit `templates/deck.html` directly: its JavaScript lives in a few
@@ -174,6 +187,8 @@ pytest               # HTTP e2e + unit
 CI runs lint and the Python suite on every push; the Playwright suite runs when
 a browser is available.
 
+</details>
+
 ## License
 
 MIT © Dory Zidon
@@ -181,5 +196,5 @@ MIT © Dory Zidon
 ## About
 
 Built by [Dory Zidon](https://doryzidon.com). I use it to plan my own
-builds. If it saves you from one bad plan, a star helps other people find it.
+builds.
 Bugs and ideas are welcome in [Issues](https://github.com/DoryZi/plan-html/issues).
