@@ -1,13 +1,30 @@
 # plan-html
 
-**Stop approving plans you didn't read.**
+**Align with your agent before it builds.**
 
-Your coding agent writes its plan as a wall of markdown. You skim it, approve
-it, and find out later that it misunderstood you. plan-html turns that plan into
-a page in your browser: what the agent understood, the choices it needs from
-you, what it will not touch, and how it will prove the work is done. You answer
-with a click or in your own words, ask a question on any card, and the agent
-builds only once you both agree.
+> "As Claude takes on more, I'd noticed I was reading plans less closely, and I
+> wanted a way to stay engaged with its choices rather than just hand them off."
+>
+> Thariq Shihipar, Anthropic, in [The Unreasonable Effectiveness of HTML](https://claude.com/blog/using-claude-code-the-unreasonable-effectiveness-of-html)
+
+plan-html is that idea, built for planning. Your agent's plan opens as a page in
+your browser, not a wall of text, and you settle four things before any code is
+written:
+
+| | |
+|---|---|
+| **Intent** | What you actually want. The agent writes down what it understood, and you correct it in your own words. |
+| **Boundaries** | What it must respect and what it must not touch. |
+| **Decisions** | The forks in the design, with options and tradeoffs. Decide them yourself, or leave any of them to the agent. |
+| **Steps and the finish line** | The workflow it will follow, and the checks that prove the work is done. |
+
+A vague idea goes in. A concrete plan you can run again comes out.
+
+**Why it matters.** Agents now run for hours. Get aligned in the first few
+minutes and you can send one off on a 12 hour build and get back what you
+actually wanted. It is still iterative development. plan-html makes each
+iteration better: a round is a few clicks and a few words, and you can question
+any single card without rereading the whole plan.
 
 Works with **Claude Code**, **Codex** and **Pi**. Runs on your machine, no
 dependencies, MIT.
