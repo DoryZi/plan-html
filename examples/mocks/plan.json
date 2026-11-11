@@ -1,0 +1,300 @@
+{
+ "title": "Emails that land on the right job (mocks example)",
+ "slug": "mocks-example",
+ "task": "Example deck: one round with the design question as mock screens and the plan written for the recommended option",
+ "date": "2026-11-01",
+ "round": 1,
+ "rev": 1,
+ "summary": "One round, everything in it. The question shows its three options as strips of **mock screens**, one per step: click a screen to see it full size and leave notes on it, then **Pick** one. The intents and steps below are written for **C** (the recommended option) and follow your pick. Finalize when it is right.",
+ "goal": "When an email about a job arrives, or one the app missed, it ends up on the right company and role with a reason and an Undo, and I never have to approve every small change.",
+ "design": {
+  "state": "open",
+  "width": 1280,
+  "height": 800,
+  "journeys": [
+   {
+    "id": "add-email",
+    "title": "Add a missing email",
+    "summary": "The invite for the technical chat went to the personal inbox, which the app does not read: find it and attach it",
+    "steps": [
+     {
+      "title": "Company",
+      "do": "Add missing email",
+      "click": "Add missing email",
+      "screen": "mocks/add-email-1.html"
+     },
+     {
+      "title": "Search your mail",
+      "do": "Click the invite to read it, then Attach",
+      "click": "Attach",
+      "screen": "mocks/add-email-2.html"
+     },
+     {
+      "title": "Linked, with Undo",
+      "do": "Open Changes",
+      "click": "Changes",
+      "screen": "mocks/add-email-3.html"
+     },
+     {
+      "title": "Changes",
+      "screen": "mocks/add-email-4.html"
+     }
+    ]
+   },
+   {
+    "id": "find",
+    "title": "Find a job in the table",
+    "summary": "Column menus, chips and search work like the real table",
+    "steps": [
+     {
+      "title": "Applications",
+      "do": "Open the Where menu, pick Remote",
+      "click": "Where",
+      "screen": "mocks/find-1.html"
+     },
+     {
+      "title": "Remote, by pay",
+      "do": "Click a company",
+      "click": "Northwind Labs",
+      "screen": "mocks/find-2.html"
+     },
+     {
+      "title": "Today",
+      "screen": "mocks/find-3.html"
+     }
+    ]
+   }
+  ],
+  "replies": {}
+ },
+ "discovered": [
+  {
+   "id": "built-on",
+   "title": "Built on the current app",
+   "summary": "The Applications table, the company page and the sidebar are today's, unchanged",
+   "finding": "The prototype copies the real app's CSS and markup. New in this design: what the app does with new mail (the question below), **Add missing email** from the company page, emails that open in place, the **Changed by email** note with **Undo**, and the **Changes** page.",
+   "source": "crm/web/templates"
+  }
+ ],
+ "decisions": [
+  {
+   "id": "fork-linking",
+   "title": "When the app knows where an email belongs, what happens?",
+   "status": "needs-you",
+   "summary": "The app reads new job mail and finds where each email belongs. This morning three came in: Maya's reply in Dana's thread (sure), a recruiter naming two clients (unsure) and a Topgig match for a new company (unsure). Compare what happens to them.",
+   "building": "What the app does with a matched email: link it and show the change with Undo (A), keep it in To confirm until you say so (B), or link the sure ones and ask about the rest (C). Add missing email, emails opening in place, and Changes work the same in all three. **Recommended: C.** The plan below is written for it; pick another and the intents follow.",
+   "variant": "linking",
+   "variantLabel": "Linking",
+   "options": [
+    {
+     "key": "A",
+     "label": "A. Link it on its own",
+     "caption": "Nothing waits for you: you check what it did and undo what is wrong. Fastest, but unsure guesses get linked too.",
+     "steps": [
+      {
+       "title": "New mail is read",
+       "do": "Open Changes (3 linked on their own)",
+       "click": "3 linked on their own",
+       "screen": "mocks/linking-a-1.html"
+      },
+      {
+       "title": "Changes",
+       "do": "Open Northwind Labs",
+       "click": "Northwind Labs",
+       "screen": "mocks/linking-a-2.html"
+      },
+      {
+       "title": "Linked on its own",
+       "do": "Undo, or Looks right",
+       "click": "Looks right",
+       "screen": "mocks/linking-a-3.html"
+      },
+      {
+       "title": "An unsure guess, linked anyway",
+       "do": "Wrong application",
+       "screen": "mocks/linking-a-4.html"
+      }
+     ]
+    },
+    {
+     "key": "B",
+     "label": "B. Ask me first",
+     "caption": "Nothing changes until you confirm. Most control, one more click for every email.",
+     "steps": [
+      {
+       "title": "New mail is read",
+       "do": "Open To confirm (3)",
+       "click": "3 to confirm",
+       "screen": "mocks/linking-b-1.html"
+      },
+      {
+       "title": "To confirm",
+       "do": "Click Maya's email to read it",
+       "click": "Re: Quick chat this week?",
+       "screen": "mocks/linking-b-2.html"
+      },
+      {
+       "title": "Read it in place",
+       "do": "Confirm",
+       "click": "Confirm",
+       "screen": "mocks/linking-b-3.html"
+      },
+      {
+       "title": "Linked, with Undo",
+       "screen": "mocks/linking-b-4.html"
+      }
+     ]
+    },
+    {
+     "key": "C",
+     "label": "C. Link when sure, ask when not",
+     "caption": "Same thread or same sender links at once; new companies and vague recruiters wait for you.",
+     "steps": [
+      {
+       "title": "New mail is read",
+       "do": "Open To confirm (2)",
+       "click": "2 to confirm",
+       "screen": "mocks/linking-c-1.html"
+      },
+      {
+       "title": "Unsure ones wait",
+       "do": "Confirm the Topgig match",
+       "click": "Confirm",
+       "screen": "mocks/linking-c-2.html"
+      },
+      {
+       "title": "Linked, with Undo",
+       "do": "Open Changes",
+       "click": "Changes 2",
+       "screen": "mocks/linking-c-3.html"
+      },
+      {
+       "title": "The sure one, linked on its own",
+       "do": "Undo, or Looks right",
+       "screen": "mocks/linking-c-4.html"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "diagramViewBox": "0 0 700 120",
+ "diagramSvg": "<rect class='node alt1' x='20' y='36' width='140' height='48' rx='10'/><text class='node-label' x='90' y='58' text-anchor='middle'>Email arrives</text><text class='node-sub' x='90' y='74' text-anchor='middle'>or found missing</text><line class='edge' x1='160' y1='60' x2='220' y2='60' marker-end='url(#arrow)'/><rect class='node' x='220' y='36' width='140' height='48' rx='10'/><text class='node-label' x='290' y='58' text-anchor='middle'>Match</text><text class='node-sub' x='290' y='74' text-anchor='middle'>sure or unsure</text><line class='edge' x1='360' y1='60' x2='420' y2='60' marker-end='url(#arrow)'/><rect class='node alt2' x='420' y='36' width='140' height='48' rx='10'/><text class='node-label' x='490' y='58' text-anchor='middle'>Link or ask</text><text class='node-sub' x='490' y='74' text-anchor='middle'>A, B or C</text><line class='edge' x1='560' y1='60' x2='600' y2='60' marker-end='url(#arrow)'/><rect class='node alt3' x='600' y='36' width='80' height='48' rx='10'/><text class='node-label' x='640' y='64' text-anchor='middle'>Undo</text>",
+ "intents": [
+  {
+   "id": "i-sure",
+   "title": "Sure matches link on their own",
+   "journey": "linking-C",
+   "intent": "I want an email the app is sure about (a reply in a thread it knows) linked to its job on its own, with a reason I can read and an Undo, so I never approve what is obvious.",
+   "verify": {
+    "method": "e2e golden path, 1280 and 390",
+    "command": "uv run pytest -m golden -k linking_sure",
+    "expected": "Maya's reply shows on Northwind Labs with 'linked on its own: reply in Dana's thread' and an Undo that puts it back."
+   }
+  },
+  {
+   "id": "i-unsure",
+   "title": "Unsure ones wait for me",
+   "journey": "linking-C",
+   "intent": "I want an email the app is not sure about (a recruiter naming two clients, a Topgig match for a new company) kept in **To confirm**, where I read it in place and confirm or say where it goes.",
+   "verify": {
+    "method": "e2e golden path, 1280 and 390",
+    "command": "uv run pytest -m golden -k linking_unsure",
+    "expected": "To confirm (2) lists the recruiter's email and the Topgig match; Confirm files the match on Northwind and the count drops to 1."
+   }
+  },
+  {
+   "id": "i-add-email",
+   "title": "Add a missing email",
+   "journey": "add-email",
+   "intent": "I want to find an email the app never read (it went to my personal inbox) from the company page and attach it, with the same Undo.",
+   "verify": {
+    "method": "e2e golden path, 1280 and 390",
+    "command": "uv run pytest -m golden -k add_email",
+    "expected": "Add missing email opens the search, the invite attaches to Northwind, Changes logs it."
+   }
+  },
+  {
+   "id": "i-find",
+   "title": "Find a job in the table",
+   "journey": "find",
+   "intent": "I want the jobs table to filter by where and sort by pay the way it does today, so nothing I use breaks.",
+   "verify": {
+    "method": "e2e, 1280 and 390",
+    "command": "uv run pytest tests/e2e/test_jobs.py -k where_remote",
+    "expected": "Where: Remote leaves 6 rows sorted by pay; a row opens its company."
+   }
+  }
+ ],
+ "boundaries": [
+  {
+   "id": "b-mail",
+   "title": "Read-only mail",
+   "boundary": "The app reads Gmail and never sends, labels or moves a message. Nothing here changes that."
+  }
+ ],
+ "steps": [
+  {
+   "id": "s-match",
+   "kind": "step",
+   "title": "Match scoring",
+   "intent": "i-sure",
+   "description": "Score each new email against open jobs: thread id, sender's company, role words. Sure means a known thread or a known person at one open job.",
+   "files": "crm/mail/match.py",
+   "test": "unit"
+  },
+  {
+   "id": "s-link",
+   "kind": "step",
+   "title": "Link sure matches with a reason and Undo",
+   "intent": "i-sure",
+   "description": "File a sure match on its job, write the reason and a Changes line; Undo unfiles it and keeps the email in To confirm.",
+   "files": "crm/mail/link.py, crm/web/routes/changes.py",
+   "test": "unit, e2e"
+  },
+  {
+   "id": "s-confirm",
+   "kind": "step",
+   "title": "To confirm",
+   "intent": "i-unsure",
+   "description": "The To confirm list on Today and its page: read the email in place, Confirm, or pick the job it goes to.",
+   "files": "crm/web/routes/confirm.py, templates/confirm/*",
+   "test": "e2e"
+  },
+  {
+   "id": "s-add",
+   "kind": "step",
+   "title": "Add missing email",
+   "intent": "i-add-email",
+   "description": "Search the mailbox from the company page, read a result in place, Attach it (same link path as a sure match).",
+   "files": "crm/web/routes/company_mail.py",
+   "test": "e2e"
+  }
+ ],
+ "finalVerify": [
+  {
+   "intent": "i-sure",
+   "method": "e2e golden path, 1280 and 390",
+   "command": "uv run pytest -m golden -k linking_sure",
+   "expected": "Maya's reply shows on Northwind Labs with 'linked on its own: reply in Dana's thread' and an Undo that puts it back."
+  },
+  {
+   "intent": "i-unsure",
+   "method": "e2e golden path, 1280 and 390",
+   "command": "uv run pytest -m golden -k linking_unsure",
+   "expected": "To confirm (2) lists the recruiter's email and the Topgig match; Confirm files the match on Northwind and the count drops to 1."
+  },
+  {
+   "intent": "i-add-email",
+   "method": "e2e golden path, 1280 and 390",
+   "command": "uv run pytest -m golden -k add_email",
+   "expected": "Add missing email opens the search, the invite attaches to Northwind, Changes logs it."
+  },
+  {
+   "intent": "i-find",
+   "method": "e2e, 1280 and 390",
+   "command": "uv run pytest tests/e2e/test_jobs.py -k where_remote",
+   "expected": "Where: Remote leaves 6 rows sorted by pay; a row opens its company."
+  }
+ ]
+}

@@ -27,8 +27,10 @@ Usage:
         --plan /abs/path/to/plan.json [--timeout 1800]
 
 Output contract (stdout is exactly one JSON line):
-    User sent a round / finalized:
-        {"action":"send-round"|"finalize","round":N,"cards":[...]}
+    User sent a round / locked the design / finalized:
+        {"action":"send-round"|"lock-design"|"finalize","round":N,"cards":[...],"designNotes":[...]}
+    Meanwhile (live mode, or any open deck): one line per pick, as it happens:
+        {"action":"pick","cardId":"...","choice":"..."|null,"round":N}
     Timeout with autosaved partial answers:
         {"action":"timeout","timedOut":true,"saved":{...}}   (exit code 1)
     Timeout with nothing saved:
@@ -58,6 +60,17 @@ logging.basicConfig(
     format="[plan-html] %(message)s",
 )
 IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp"}
+# The design prototype: plain HTML pages plus the CSS, scripts, icons and fonts they load.
+SCREEN_TYPES = {".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
+                ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".woff2": "font/woff2"}
+FILE_TYPES = {**IMAGE_TYPES, **SCREEN_TYPES}
+# A prototype page runs in a sandbox with no origin of its own, even when opened in its own tab: it can run its
+# own script and follow its own links, but cannot read the deck or post answers.
+SCREEN_SANDBOX = "sandbox allow-scripts allow-forms"
+# Added to every prototype page: tells the deck which page and route (#/...) is showing, on load and after each
+# click inside it, so full screen and the journey steps follow the prototype.
+SCREEN_REPORTER = ("<script>(function(){function r(){try{parent.postMessage({planHtmlScreen:location.pathname,"
+                   'planHtmlRoute:location.hash},"*")}catch(e){}}r();addEventListener("hashchange",r)})()</script>')
 
 log = logging.getLogger("plan-html")
 
@@ -113,7 +126,7 @@ def round_to_answers(round_payload: dict) -> dict:
     """Convert a submitted round into the autosave shape the deck restores from.
 
     :param round_payload: ``{"action", "round", "cards": [...]}`` from /submit.
-    :returns: ``{"round": N, "answers": {id: {choice, answer, question, edit}}}``.
+    :returns: ``{"round": N, "answers": {id: {choice, answer, question, edit}}, "design": {notes, sent, reviews}}``.
     """
     answers: dict = {}
     for idx, card in enumerate(round_payload.get("cards") or []):
@@ -126,9 +139,25 @@ def round_to_answers(round_payload: dict) -> dict:
         # keep order/dismissed even on an otherwise-empty card
         answers[card.get("id", "")] = entry
     result = {"round": round_payload.get("round", 1), "answers": answers}
+    if any(round_payload.get(k) for k in ("designNotes", "designNotesEarlier", "designReviews")):
+        result["design"] = {"notes": round_payload.get("designNotes") or [],
+                            "sent": round_payload.get("designNotesEarlier") or [],
+                            "reviews": {r["journey"]: r["review"] for r in round_payload.get("designReviews") or []
+                                        if isinstance(r, dict) and r.get("journey") and r.get("review")}}
     if round_payload.get("agentActions"):
         result["agentActions"] = round_payload["agentActions"]
     return result
+
+
+def inject_reporter(body: bytes) -> bytes:
+    """Add the route reporter script to a prototype page, before ``</body>`` (or at the end).
+
+    :param body: The page's HTML bytes.
+    :returns: The HTML with :data:`SCREEN_REPORTER` added once.
+    """
+    tag = SCREEN_REPORTER.encode("utf-8")
+    at = body.lower().rfind(b"</body>")
+    return body[:at] + tag + body[at:] if at >= 0 else body + tag
 
 
 def render_html(plan: dict, saved: dict | None, out_path: Path) -> None:
@@ -321,6 +350,12 @@ def build_handler(html_path: Path, plan_path: Path, answers_path: Path,
                     with clients_lock:
                         if self.wfile in sse_clients:
                             sse_clients.remove(self.wfile)
+            elif self.path.split("?", 1)[0] == "/shots":
+                # the step screenshots that exist (check_prototype.py writes them): the deck shows a screenshot
+                # only when it is there, and the screen live otherwise, so it never asks for a missing file
+                folder = plan_path.parent / "files" / "shots"
+                names = sorted(f.name for f in folder.glob("*") if f.suffix.lower() in IMAGE_TYPES) if folder.is_dir() else []
+                self._respond_json(200, json.dumps(names).encode("utf-8"))
             elif self.path.startswith("/files/"):
                 self._send_file()
             else:
@@ -328,28 +363,40 @@ def build_handler(html_path: Path, plan_path: Path, answers_path: Path,
                 self.end_headers()
 
         def _send_file(self) -> None:
-            # Images a plan shows on its cards (`![alt](files/x.png)`): only image files
-            # from the `files/` folder next to the plan, never anything outside it.
+            # Card images (`![alt](files/x.png)`) and the design prototype (`files/proto/...`): only known file
+            # types from the `files/` folder next to the plan, never anything outside it.
             base = (plan_path.parent / "files").resolve()
             name = urllib.parse.unquote(self.path.split("?", 1)[0][len("/files/"):])
             try:
                 target = (base / name).resolve()
             except (ValueError, OSError):  # a NUL byte or a broken path: not found, not a crash
                 target = base
-            kind = IMAGE_TYPES.get(target.suffix.lower())
+            kind = FILE_TYPES.get(target.suffix.lower())
             if base not in target.parents or kind is None or not target.is_file():
                 self.send_response(404)
                 self.end_headers()
                 return
             body = target.read_bytes()
+            if target.suffix.lower() == ".html":
+                body = inject_reporter(body)
             self.send_response(200)
             self.send_header("Content-Type", kind)
             self.send_header("Content-Length", str(len(body)))
             self.send_header("X-Content-Type-Options", "nosniff")
+            if target.suffix.lower() in SCREEN_TYPES:
+                self.send_header("Cache-Control", "no-cache")  # the agent changes the prototype between rounds
+            if target.suffix.lower() in (".html", ".svg"):
+                self.send_header("Content-Security-Policy", SCREEN_SANDBOX)
+            if target.suffix.lower() == ".woff2":  # a sandboxed page has no origin, and fonts load only with CORS
+                self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
             self.wfile.write(body)
 
         def do_POST(self) -> None:
+            # A prototype page runs sandboxed with no origin ("null"): it may never write answers or rounds.
+            if self.headers.get("Origin") == "null":
+                self._respond_json(403, b'{"ok":false}')
+                return
             if self.path == "/save":
                 data = self._read_json()
                 if data is None:
@@ -385,6 +432,21 @@ def build_handler(html_path: Path, plan_path: Path, answers_path: Path,
                          sse_clients, clients_lock)
                 # emit on stdout so a watching agent Monitor wakes immediately (push)
                 print(json.dumps({"action": "ask", **q}, ensure_ascii=False), flush=True)
+                self._respond_json(200)
+            elif self.path == "/pick":
+                # a pick on a card, the moment it is made: a watching agent can write the plan for it while the
+                # user goes on (planning while you plan). Body: {cardId, choice|null}.
+                data = self._read_json()
+                card_id = str(data.get("cardId") or "").strip() if isinstance(data, dict) else ""
+                if not card_id:
+                    self._respond_json(400, b'{"ok":false}')
+                    return
+                try:
+                    rnd = json.loads(plan_path.read_text(encoding="utf-8")).get("round", 1)
+                except (OSError, ValueError):
+                    rnd = None
+                print(json.dumps({"action": "pick", "cardId": card_id, "choice": data.get("choice"),
+                                  "round": rnd}, ensure_ascii=False), flush=True)
                 self._respond_json(200)
             elif self.path == "/answer":
                 # agent pushed a single-card answer — stream it to the open deck

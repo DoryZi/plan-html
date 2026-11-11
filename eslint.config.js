@@ -14,6 +14,8 @@ const browserGlobals = {
   fetch: "readonly", EventSource: "readonly", setTimeout: "readonly",
   clearTimeout: "readonly", requestAnimationFrame: "readonly",
   console: "readonly", performance: "readonly", URLSearchParams: "readonly",
+  URL: "readonly", CSS: "readonly", location: "readonly", history: "readonly",
+  matchMedia: "readonly", getComputedStyle: "readonly",
 };
 
 const nodeGlobals = {
@@ -33,7 +35,7 @@ export default [
       globals: browserGlobals,
     },
     rules: {
-      "no-unused-vars": ["error", { args: "none", varsIgnorePattern: "^_" }],
+      "no-unused-vars": ["error", { args: "none", varsIgnorePattern: "^_", caughtErrors: "none" }],
       "no-undef": "error",
       "prefer-const": "error",
       eqeqeq: ["error", "smart"],

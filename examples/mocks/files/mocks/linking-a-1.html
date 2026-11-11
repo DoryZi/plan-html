@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>acme jobtrack (prototype)</title>
+<link rel="stylesheet" href="app.css">
+<style>.proto-hints :is(a[href^="#/"]:not([data-out]), [data-action]:not(form), [data-change], [data-input], summary, form[data-action] [type=submit]){outline:2px solid rgba(37,99,235,.85)!important;outline-offset:1px;border-radius:4px}.proto-hints :is(a[href], button, [role=button], select, input[type=checkbox], input[type=radio], summary, [data-action]:not(form)):not(:is(a[href^="#/"]:not([data-out]), [data-action]:not(form), [data-change], [data-input], summary, form[data-action] [type=submit])){outline:2px dashed rgba(120,113,108,.9)!important;outline-offset:1px;border-radius:4px}</style></head>
+<body>
+<div id="app"><div class="shell" data-shell="">
+<header class="topbar">
+<a class="brand" href="#"><span class="brand-dot" aria-hidden="true"></span><span>acme <span class="brand-sub">jobtrack</span></span></a>
+<button type="button" class="btn btn-ghost" data-action="toggleMenu" aria-expanded="false" aria-controls="sidebar"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>Menu</button>
+</header>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="#"><span class="brand-dot" aria-hidden="true"></span><span>acme<br><span class="brand-sub">jobtrack</span></span></a>
+<nav class="nav" aria-label="Main">
+<a class="nav-link" href="#" aria-current="page">Today <span class="nav-count">3</span></a>
+<a class="nav-link" href="#">Changes <span class="nav-count">4</span></a>
+<a class="nav-link" href="#" data-out="app">All opportunities <span class="nav-count">34</span></a>
+<p class="nav-section">Offers</p>
+<a class="nav-link" href="#" data-out="app">Product build <span class="nav-count">11</span></a><a class="nav-link" href="#" data-out="app">Code review <span class="nav-count">9</span></a><a class="nav-link" href="#" data-out="app">Team workshops <span class="nav-count">5</span></a>
+<p class="nav-section">Jobs</p>
+<a class="nav-link" href="#">Applications <span class="nav-count">9</span></a>
+
+<p class="nav-section">Add leads</p>
+<a class="nav-link" href="#" data-out="app">Find leads</a>
+<a class="nav-link" href="#" data-out="app">Import</a>
+<div class="nav-gap" aria-hidden="true"></div>
+<a class="nav-link" href="#" data-out="app">Settings</a>
+</nav>
+</aside>
+<main class="main" id="main">
+
+<header class="page-head">
+<div class="page-titles">
+<p class="page-eyebrow">Thursday, October 29</p>
+<h1>3 things need you today</h1>
+<p class="page-sub">Closest to closing first. Click a company to open it.</p>
+</div>
+
+</header>
+<section class="jobs-line" aria-label="Mail and jobs">
+<p><span class="status"><span class="dot dot-reading" aria-hidden="true"></span>Mail read at 07:30: 3 new emails about jobs.</span><a class="cell-link" href="#">3 linked on their own</a></p>
+<p><span class="status"><span class="dot dot-off" aria-hidden="true"></span>No jobs running or queued.</span><a class="cell-link" href="#" data-out="app">Open Jobs</a></p>
+</section>
+<div class="list-split list-split-today"><div class="split"><div class="split-main"><div id="today-todos">
+<div class="grid-box grid-pin">
+<div class="grid-scroll" role="region" aria-label="To do" tabindex="0">
+<table class="grid">
+<thead><tr><th scope="col">Company</th><th scope="col">Contact</th><th scope="col">To do</th><th scope="col">Pipeline</th><th scope="col">Status</th><th scope="col">Close</th></tr></thead>
+<tbody>
+<tr data-company-id="brightline" class="proto-row" data-action="open" data-arg="#/company/brightline">
+<td title="Brightline Health"><div class="cell-flex cap-flex cap-name"><a class="row-btn" href="#">Brightline Health</a></div></td>
+<td title="Priya Shah"><span class="cap cap-who">Priya Shah</span></td>
+<td title="Answer the offer"><div class="cell-flex cap-flex cap-todo"><span class="cap-text">Answer the offer</span></div></td>
+<td class="muted" title="Job applications"><span class="cap cap-pipe">Job applications</span></td>
+<td title="Offer"><span class="cap cap-status"><span class="status"><span class="dot dot-active" aria-hidden="true"></span>Offer</span></span></td>
+<td class="close-col"><span class="close-pct">85%<span class="bar" aria-hidden="true"><span class="bar-fill" style="width: 85%"></span></span></span></td>
+</tr><tr data-company-id="halden" class="proto-row" data-action="open" data-arg="#/company/halden">
+<td title="Halden Grid"><div class="cell-flex cap-flex cap-name"><a class="row-btn" href="#">Halden Grid</a></div></td>
+<td title="Jonas Berg"><span class="cap cap-who">Jonas Berg</span></td>
+<td class="late" title="Send the take-home, due Oct 28"><div class="cell-flex cap-flex cap-todo"><span class="cap-text">Send the take-home, due Oct 28</span> <span class="mark mark-warn">Overdue</span></div></td>
+<td class="muted" title="Job applications"><span class="cap cap-pipe">Job applications</span></td>
+<td title="Technical"><span class="cap cap-status"><span class="status"><span class="dot dot-active" aria-hidden="true"></span>Technical</span></span></td>
+<td class="close-col"><span class="close-pct">55%<span class="bar" aria-hidden="true"><span class="bar-fill" style="width: 55%"></span></span></span></td>
+</tr><tr data-company-id="nimbus" class="proto-row" data-action="open" data-arg="#/company/nimbus">
+<td title="Nimbus Robotics"><div class="cell-flex cap-flex cap-name"><a class="row-btn" href="#">Nimbus Robotics</a></div></td>
+<td title="Omar Haddad"><span class="cap cap-who">Omar Haddad</span></td>
+<td title="Book the hiring manager call"><div class="cell-flex cap-flex cap-todo"><span class="cap-text">Book the hiring manager call</span></div></td>
+<td class="muted" title="Job applications"><span class="cap cap-pipe">Job applications</span></td>
+<td title="Hiring manager"><span class="cap cap-status"><span class="status"><span class="dot dot-active" aria-hidden="true"></span>Hiring manager</span></span></td>
+<td class="close-col"><span class="close-pct">45%<span class="bar" aria-hidden="true"><span class="bar-fill" style="width: 45%"></span></span></span></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+</div>
+</div></div><div class="split-side" id="panel-slot"></div></div></div>
+<section class="stack" id="today-pipelines">
+<h2 class="section-title" id="pipelines-h">Pipelines</h2>
+<div class="grid-box grid-pin">
+<div class="grid-scroll" role="region" aria-label="Pipelines" tabindex="0">
+<table class="grid">
+<thead><tr><th scope="col">Pipeline</th><th scope="col">Active</th><th scope="col">Prospect</th><th scope="col">Contact</th><th scope="col">Due today</th><th scope="col">Meetings this week</th><th scope="col">Contacted, 30 days</th><th scope="col">Replied</th><th scope="col">Reply rate</th></tr></thead>
+<tbody>
+<tr>
+<td><a class="cell-link" href="#" data-out="app">Product build</a></td>
+<td><b>2</b></td>
+<td>2</td>
+<td>7</td>
+<td>0</td>
+<td>1</td>
+<td>5</td>
+<td>1</td>
+<td>20%</td>
+</tr><tr>
+<td><a class="cell-link" href="#" data-out="app">Code review</a></td>
+<td><b>2</b></td>
+<td>4</td>
+<td>3</td>
+<td>0</td>
+<td>1</td>
+<td>6</td>
+<td>3</td>
+<td>50%</td>
+</tr><tr>
+<td><a class="cell-link" href="#" data-out="app">Team workshops</a></td>
+<td><b>1</b></td>
+<td>3</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>3</td>
+<td>1</td>
+<td>33%</td>
+</tr><tr>
+<td><a class="cell-link" href="#">Job applications</a></td>
+<td><b>6</b></td>
+<td>2</td>
+<td>1</td>
+<td class="late">3</td>
+<td>2</td>
+<td>9</td>
+<td>6</td>
+<td>67%</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+</div>
+</section>
+</main>
+</div></div>
+
+
+
+
+
+<div style="position: absolute; left: 0px; top: 0px; width: 0px; height: 0px; z-index: 9998;"></div><script src="proto-kit.js"></script>
+</body></html>

@@ -1,0 +1,172 @@
+{
+ "title": "Emails that land on the right job (design-first example)",
+ "slug": "prototype-example",
+ "task": "Example deck: a design-first round with a working prototype of the CRM",
+ "date": "2026-10-30",
+ "round": 1,
+ "rev": 1,
+ "hideEmpty": true,
+ "summary": "A **design-first** round. One question with three options that exclude each other, each a row of screenshots, one per step, taken from a working prototype of the CRM. Click any screenshot to try that option live, full screen; press 💬 Comment and click anything to leave a note right there. Pick one option, or write how to mix them. When it is right, press **Lock the design**.",
+ "goal": "When an email about a job arrives, or one the app missed, it ends up on the right company and role with a reason and an Undo, and I never have to approve every small change.",
+ "design": {
+  "state": "shaping",
+  "prototype": "proto/index.html",
+  "start": "#/",
+  "width": 1280,
+  "height": 800,
+  "journeys": [
+   {
+    "id": "add-email",
+    "title": "Add a missing email",
+    "summary": "The invite for the technical chat went to the personal inbox, which the app does not read: find it and attach it",
+    "steps": [
+     {
+      "title": "Company",
+      "route": "#/company/northwind",
+      "do": "Add missing email"
+     },
+     {
+      "title": "Search your mail",
+      "route": "#/company/northwind/add-email",
+      "do": "Click the invite to read it, then Attach"
+     },
+     {
+      "title": "Linked, with Undo",
+      "route": "#/company/northwind?scenario=linked",
+      "do": "Open Changes"
+     },
+     {
+      "title": "Changes",
+      "route": "#/changes?scenario=linked"
+     }
+    ]
+   },
+   {
+    "id": "find",
+    "title": "Find a job in the table",
+    "summary": "Column menus, chips and search work like the real table",
+    "steps": [
+     {
+      "title": "Applications",
+      "route": "#/jobs",
+      "do": "Open the Where menu, pick Remote"
+     },
+     {
+      "title": "Remote, by pay",
+      "route": "#/jobs?scenario=filtered",
+      "do": "Click a company"
+     },
+     {
+      "title": "Today",
+      "route": "#/"
+     }
+    ]
+   }
+  ],
+  "replies": {}
+ },
+ "discovered": [
+  {
+   "id": "built-on",
+   "title": "Built on the current app",
+   "summary": "The Applications table, the company page and the sidebar are today's, unchanged",
+   "finding": "The prototype copies the real app's CSS and markup. New in this design: what the app does with new mail (the question below), **Add missing email** from the company page, emails that open in place, the **Changed by email** note with **Undo**, and the **Changes** page.",
+   "source": "crm/web/templates"
+  }
+ ],
+ "decisions": [
+  {
+   "id": "fork-linking",
+   "title": "When the app knows where an email belongs, what happens?",
+   "status": "needs-you",
+   "summary": "The app reads new job mail and finds where each email belongs. This morning three came in: Maya's reply in Dana's thread (sure), a recruiter naming two clients (unsure) and a Topgig match for a new company (unsure). Compare what happens to them.",
+   "building": "What the app does with a matched email: link it and show the change with Undo (A), keep it in To confirm until you say so (B), or link the sure ones and ask about the rest (C). Add missing email, emails opening in place, and Changes work the same in all three.",
+   "variant": "linking",
+   "variantLabel": "Linking",
+   "options": [
+    {
+     "key": "A",
+     "label": "A. Link it on its own",
+     "caption": "Nothing waits for you: you check what it did and undo what is wrong. Fastest, but unsure guesses get linked too.",
+     "steps": [
+      {
+       "title": "New mail is read",
+       "route": "#/",
+       "do": "Open Changes (3 linked on their own)"
+      },
+      {
+       "title": "Changes",
+       "route": "#/changes",
+       "do": "Open Northwind Labs"
+      },
+      {
+       "title": "Linked on its own",
+       "route": "#/company/northwind",
+       "do": "Undo, or Looks right"
+      },
+      {
+       "title": "An unsure guess, linked anyway",
+       "route": "#/company/orbital",
+       "do": "Wrong application"
+      }
+     ]
+    },
+    {
+     "key": "B",
+     "label": "B. Ask me first",
+     "caption": "Nothing changes until you confirm. Most control, one more click for every email.",
+     "steps": [
+      {
+       "title": "New mail is read",
+       "route": "#/",
+       "do": "Open To confirm (3)"
+      },
+      {
+       "title": "To confirm",
+       "route": "#/confirm",
+       "do": "Click Maya's email to read it"
+      },
+      {
+       "title": "Read it in place",
+       "route": "#/confirm?open=m-maya",
+       "do": "Confirm"
+      },
+      {
+       "title": "Linked, with Undo",
+       "route": "#/company/northwind?scenario=confirmed"
+      }
+     ]
+    },
+    {
+     "key": "C",
+     "label": "C. Link when sure, ask when not",
+     "caption": "Same thread or same sender links at once; new companies and vague recruiters wait for you.",
+     "steps": [
+      {
+       "title": "New mail is read",
+       "route": "#/",
+       "do": "Open To confirm (2)"
+      },
+      {
+       "title": "Unsure ones wait",
+       "route": "#/confirm",
+       "do": "Confirm the Topgig match"
+      },
+      {
+       "title": "Linked, with Undo",
+       "route": "#/confirm?scenario=confirmed-c",
+       "do": "Open Northwind Labs"
+      },
+      {
+       "title": "The sure one, linked on its own",
+       "route": "#/company/northwind",
+       "do": "Undo, or Looks right"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "diagramViewBox": "0 0 700 120",
+ "diagramSvg": "<rect class='node alt1' x='20' y='36' width='140' height='48' rx='10'/><text class='node-label' x='90' y='58' text-anchor='middle'>Email arrives</text><text class='node-sub' x='90' y='74' text-anchor='middle'>or found missing</text><line class='edge' x1='160' y1='60' x2='220' y2='60' marker-end='url(#arrow)'/><rect class='node' x='220' y='36' width='140' height='48' rx='10'/><text class='node-label' x='290' y='58' text-anchor='middle'>Match</text><text class='node-sub' x='290' y='74' text-anchor='middle'>sure or unsure</text><line class='edge' x1='360' y1='60' x2='420' y2='60' marker-end='url(#arrow)'/><rect class='node alt2' x='420' y='36' width='140' height='48' rx='10'/><text class='node-label' x='490' y='58' text-anchor='middle'>Link or ask</text><text class='node-sub' x='490' y='74' text-anchor='middle'>A, B or C</text><line class='edge' x1='560' y1='60' x2='600' y2='60' marker-end='url(#arrow)'/><rect class='node alt3' x='600' y='36' width='80' height='48' rx='10'/><text class='node-label' x='640' y='64' text-anchor='middle'>Undo</text>"
+}

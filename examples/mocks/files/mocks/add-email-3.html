@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>acme jobtrack (prototype)</title>
+<link rel="stylesheet" href="app.css">
+<style>.proto-hints :is(a[href^="#/"]:not([data-out]), [data-action]:not(form), [data-change], [data-input], summary, form[data-action] [type=submit]){outline:2px solid rgba(37,99,235,.85)!important;outline-offset:1px;border-radius:4px}.proto-hints :is(a[href], button, [role=button], select, input[type=checkbox], input[type=radio], summary, [data-action]:not(form)):not(:is(a[href^="#/"]:not([data-out]), [data-action]:not(form), [data-change], [data-input], summary, form[data-action] [type=submit])){outline:2px dashed rgba(120,113,108,.9)!important;outline-offset:1px;border-radius:4px}</style></head>
+<body>
+<div id="app"><div class="shell" data-shell="">
+<header class="topbar">
+<a class="brand" href="#"><span class="brand-dot" aria-hidden="true"></span><span>acme <span class="brand-sub">jobtrack</span></span></a>
+<button type="button" class="btn btn-ghost" data-action="toggleMenu" aria-expanded="false" aria-controls="sidebar"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>Menu</button>
+</header>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="#"><span class="brand-dot" aria-hidden="true"></span><span>acme<br><span class="brand-sub">jobtrack</span></span></a>
+<nav class="nav" aria-label="Main">
+<a class="nav-link" href="#">Today <span class="nav-count">3</span></a>
+<a class="nav-link" href="#">Changes <span class="nav-count">4</span></a>
+<a class="nav-link" href="#" data-out="app">All opportunities <span class="nav-count">34</span></a>
+<p class="nav-section">Offers</p>
+<a class="nav-link" href="#" data-out="app">Product build <span class="nav-count">11</span></a><a class="nav-link" href="#" data-out="app">Code review <span class="nav-count">9</span></a><a class="nav-link" href="#" data-out="app">Team workshops <span class="nav-count">5</span></a>
+<p class="nav-section">Jobs</p>
+<a class="nav-link" href="#" aria-current="page">Applications <span class="nav-count">9</span></a>
+
+<p class="nav-section">Add leads</p>
+<a class="nav-link" href="#" data-out="app">Find leads</a>
+<a class="nav-link" href="#" data-out="app">Import</a>
+<div class="nav-gap" aria-hidden="true"></div>
+<a class="nav-link" href="#" data-out="app">Settings</a>
+</nav>
+</aside>
+<main class="main" id="main">
+<div class="co-page" id="co-page">
+<div class="co-top">
+<a class="co-back" href="#"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6"></path></svg>Back to Applications</a>
+<a class="btn btn-ghost" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"></path></svg>Add missing email</a>
+</div>
+
+<header class="co-head">
+<div class="co-head-text">
+<h1>Northwind Labs</h1>
+<p class="co-sub">Staff AI Engineer.</p>
+<dl class="co-glance" aria-label="Northwind Labs at a glance">
+<div><dt>Where</dt><dd>Remote (EU hours)</dd></div>
+<div><dt>Pay</dt><dd>$210K to $240K</dd></div>
+<div><dt>Size</dt><dd>About 120 people</dd></div>
+<div><dt>Source</dt><dd>LinkedIn</dd></div>
+</dl>
+</div>
+<div class="co-head-stage proto-head-stage">
+<div class="co-stage proto-stage" id="co-stage">
+<div class="steps" role="group" aria-label="Stage"><button type="button" class="step step-done" data-action="setStage" data-arg="northwind|Applied">Applied</button><button type="button" class="step step-done" data-action="setStage" data-arg="northwind|Recruiter screen">Recruiter screen</button><span class="step step-now" aria-current="step">Hiring manager</span><button type="button" class="step" data-action="setStage" data-arg="northwind|Technical">Technical</button><button type="button" class="step" data-action="setStage" data-arg="northwind|Final">Final</button><button type="button" class="step" data-action="setStage" data-arg="northwind|Offer">Offer</button></div>
+<details class="co-fold" id="fold-stage-northwind"><summary>Won, lost or close %</summary><div class="co-fold-body">
+<form class="co-row" data-action="markLost" data-arg="northwind">
+<fieldset class="chips">
+<legend>Lost because</legend>
+<div class="chip-row"><label class="chip"><input type="radio" name="reason" value="rejected" data-change="pickReason" checked=""><span>Rejected</span></label><label class="chip"><input type="radio" name="reason" value="no_reply" data-change="pickReason"><span>No reply</span></label><label class="chip"><input type="radio" name="reason" value="dropped" data-change="pickReason"><span>Dropped</span></label></div>
+</fieldset>
+<button class="btn btn-ghost" type="submit">Mark as lost</button>
+<button class="btn btn-ghost" type="button" data-action="setStage" data-arg="northwind|Won">Mark as won</button>
+</form>
+<form class="co-row" data-action="saveClose" data-arg="northwind">
+<div class="field">
+<label class="field-label" for="close-pct-northwind">Close %</label>
+<input class="input" id="close-pct-northwind" name="close_pct" type="text" value="45" inputmode="numeric">
+
+
+</div>
+<button class="btn btn-ghost" type="submit">Save close %</button>
+</form>
+</div></details>
+</div>
+<span class="co-close"><b>45%</b><small>to close</small></span>
+</div>
+</header>
+<section class="ml-notes" aria-label="Changes from email">
+<div class="ml-note" role="group" aria-label="Changed by email: linked Maya Cohen's email &quot;Re: Quick chat this week?&quot;">
+<p><strong>Changed by email:</strong> linked Maya Cohen's email "Re: Quick chat this week?". Stage: Recruiter screen to Hiring manager. Close: 35% to 45%. Added Maya Cohen (Hiring manager). Next step: Technical chat, Nov 3. <span class="muted">Oct 29, 07:30</span></p>
+<p class="muted">Why: Same thread as Dana Levi's email, names Northwind Labs and the Staff AI Engineer role.</p>
+<div class="co-actions">
+<button class="btn btn-ghost" type="button" data-action="undoNote" data-arg="c-3|company/northwind" aria-label="Undo: Linked an email: &quot;Re: Quick chat this week?&quot;">Undo</button>
+<button class="btn btn-ghost" type="button" data-action="noteOk" data-arg="c-3" aria-label="Looks right: Linked an email: &quot;Re: Quick chat this week?&quot;">Looks right</button>
+</div>
+<details class="co-fold" id="note-mail-c-3"><summary>Open email</summary><div class="co-fold-body"><div class="proto-mail-card">
+<p class="proto-mail-subject">Re: Quick chat this week?</p>
+<dl class="co-glance proto-mail-meta">
+<div><dt>From</dt><dd><a class="cell-link" href="#">Maya Cohen</a> <span class="muted">maya@northwindlabs.io</span></dd></div>
+<div><dt>To</dt><dd>Alex Morgan</dd></div>
+<div><dt>Date</dt><dd>Wednesday, October 28, 2026 at 16:40</dd></div>
+<div><dt>Inbox</dt><dd>Work</dd></div>
+</dl>
+<div class="ml-text" tabindex="0" aria-label="Text of Re: Quick chat this week?">Hi Alex,
+
+Thanks for the call with Dana on Tuesday. She passed on her notes, and I'd like to move you forward for the Staff AI Engineer role at Northwind Labs.
+
+Next step: a technical chat with me and one of our staff engineers, about 60 minutes. Does Nov 3 work? Any time after 10:00 CET is fine.
+
+Best,
+Maya Cohen
+Hiring manager, Northwind Labs</div>
+<p class="proto-mail-line"><span class="muted">Thread:</span> Oct 24, Dana Levi: Quick chat this week? <span class="muted">(on Northwind Labs)</span></p>
+<p class="proto-mail-line"><span class="muted">Linked to:</span> <a class="cell-link" href="#">Northwind Labs, Staff AI Engineer</a></p>
+<p class="proto-mail-line"><span class="muted">Why linked:</span> Same thread as Dana Levi's email, names Northwind Labs and the Staff AI Engineer role</p>
+
+</div></div></details>
+<details class="co-fold" id="note-move-c-3"><summary>Wrong application</summary><form class="co-fold-body co-row" data-action="moveNote" data-arg="c-3">
+<div class="field">
+<label class="field-label" for="move-c-3">Move this email to</label>
+<select class="select" id="move-c-3" name="to" data-change="pickMove"><option value="brightline">Brightline Health, Principal AI Engineer</option><option value="copperline">Copperline, Engineering Manager, AI</option><option value="halden" selected="">Halden Grid, Principal Engineer</option><option value="kestrel-bio-a-7">Kestrel Bio, Lead AI Engineer</option><option value="nimbus">Nimbus Robotics, Staff Engineer, AI</option><option value="northwind">Northwind Labs, Staff AI Engineer</option><option value="orbital">Orbital Payments, Staff AI Engineer</option><option value="quarry">Quarry Data, AI Platform Lead</option><option value="tessel">Tessel AI, Senior ML Engineer</option><option value="vela">Vela Labs, Head of AI Engineering</option></select>
+
+
+</div>
+<button class="btn btn-ghost" type="submit">Move it</button>
+</form></details>
+</div>
+</section>
+<p class="co-touch"><span class="muted">Last touch:</span> Email, Oct 28.</p>
+<div class="co-nextbar"><span><span class="muted">Next:</span> <strong>Technical chat</strong> <span class="muted">(Nov 3)</span></span>
+<button class="btn btn-primary" type="button" data-action="editNext" data-arg="northwind">Change next step</button></div>
+<div class="co-cols">
+<div class="co-left">
+<section class="co-sec" aria-labelledby="co-time-h">
+<h2 class="co-h2" id="co-time-h">Timeline</h2>
+<div class="grid-box">
+<div class="grid-scroll" role="region" aria-label="Timeline of Northwind Labs" tabindex="0">
+<table class="grid grid-wrap">
+
+<tbody>
+<tr><td class="co-day">Oct 28</td><td class="proto-tl-cell"><details class="co-fold proto-fold" id="tl-e-1"><summary>Email in from Maya Cohen: "Re: Quick chat this week?" <span class="mark mark-good">Just linked</span></summary><div class="co-fold-body proto-tl-body"><p class="proto-why">Why linked: same thread as Dana Levi's email, names Northwind Labs and the Staff AI Engineer role.</p><div class="proto-mail-card">
+<p class="proto-mail-subject">Re: Quick chat this week?</p>
+<dl class="co-glance proto-mail-meta">
+<div><dt>From</dt><dd><a class="cell-link" href="#">Maya Cohen</a> <span class="muted">maya@northwindlabs.io</span></dd></div>
+<div><dt>To</dt><dd>Alex Morgan</dd></div>
+<div><dt>Date</dt><dd>Wednesday, October 28, 2026 at 16:40</dd></div>
+<div><dt>Inbox</dt><dd>Work</dd></div>
+</dl>
+<div class="ml-text" tabindex="0" aria-label="Text of Re: Quick chat this week?">Hi Alex,
+
+Thanks for the call with Dana on Tuesday. She passed on her notes, and I'd like to move you forward for the Staff AI Engineer role at Northwind Labs.
+
+Next step: a technical chat with me and one of our staff engineers, about 60 minutes. Does Nov 3 work? Any time after 10:00 CET is fine.
+
+Best,
+Maya Cohen
+Hiring manager, Northwind Labs</div>
+<p class="proto-mail-line"><span class="muted">Thread:</span> Oct 24, Dana Levi: Quick chat this week? <span class="muted">(on Northwind Labs)</span></p>
+<p class="proto-mail-line"><span class="muted">Linked to:</span> <a class="cell-link" href="#">Northwind Labs, Staff AI Engineer</a></p>
+<p class="proto-mail-line"><span class="muted">Why linked:</span> Same thread as Dana Levi's email, names Northwind Labs and the Staff AI Engineer role</p>
+<div class="co-actions"><button class="btn btn-ghost" type="button" data-action="unlink" data-arg="m-maya|company/northwind">Unlink from Northwind Labs</button><a class="btn btn-ghost" href="#" data-out="app">Open in Gmail</a></div>
+</div></div></details></td></tr><tr><td class="co-day">Oct 27</td><td class="proto-tl-cell"><details class="co-fold proto-fold" id="tl-e-nw-3"><summary>Call: recruiter screen with Dana Levi</summary><div class="co-fold-body proto-tl-body">
+<p>30 minutes. Dana asked how I ship LLM features to production and how I measure them. The team is 8 engineers and reports to Maya Cohen, the hiring manager. Dana passes her notes to Maya; a chat with Maya would come next.</p>
+<p><span class="muted">With</span> <a class="cell-link" href="#">Dana Levi</a><span class="muted">, recruiter</span></p>
+
+
+</div></details></td></tr><tr><td class="co-day">Oct 24</td><td class="proto-tl-cell"><details class="co-fold proto-fold" id="tl-e-nw-2"><summary>Email in from Dana Levi: "Quick chat this week?"</summary><div class="co-fold-body proto-tl-body"><div class="proto-mail-card">
+<p class="proto-mail-subject">Quick chat this week?</p>
+<dl class="co-glance proto-mail-meta">
+<div><dt>From</dt><dd><a class="cell-link" href="#">Dana Levi</a> <span class="muted">dana@northwindlabs.io</span></dd></div>
+<div><dt>To</dt><dd>Alex Morgan</dd></div>
+<div><dt>Date</dt><dd>Saturday, October 24, 2026 at 10:05</dd></div>
+<div><dt>Inbox</dt><dd>Work</dd></div>
+</dl>
+<div class="ml-text" tabindex="0" aria-label="Text of Quick chat this week?">Hi Alex,
+
+Thanks for applying to the Staff AI Engineer role. Do you have 30 minutes on Tuesday for a quick chat?
+
+Dana Levi
+Recruiter, Northwind Labs</div>
+<p class="proto-mail-line"><span class="muted">Thread:</span> Oct 28, Maya Cohen: Re: Quick chat this week? <span class="muted">(on Northwind Labs)</span></p>
+<p class="proto-mail-line"><span class="muted">Linked to:</span> <a class="cell-link" href="#">Northwind Labs, Staff AI Engineer</a></p>
+<p class="proto-mail-line"><span class="muted">Why linked:</span> Filed by the app: from northwindlabs.io, names the Staff AI Engineer role</p>
+<div class="co-actions"><button class="btn btn-ghost" type="button" data-action="unlink" data-arg="m-dana|company/northwind">Unlink from Northwind Labs</button><a class="btn btn-ghost" href="#" data-out="app">Open in Gmail</a></div>
+</div></div></details></td></tr><tr><td class="co-day">Oct 21</td><td class="proto-tl-cell"><details class="co-fold proto-fold" id="tl-e-nw-1"><summary>Applied via LinkedIn</summary><div class="co-fold-body proto-tl-body">
+<p>Applied on LinkedIn with the AI engineering CV and a short note on agent evals. The post: Staff AI Engineer, $210K to $240K, remote in EU hours.</p>
+
+<details class="co-fold" id="tl-conf-e-nw-1"><summary>The confirmation email</summary><div class="co-fold-body"><div class="proto-mail-card">
+<p class="proto-mail-subject">Thanks for applying: Staff AI Engineer</p>
+<dl class="co-glance proto-mail-meta">
+<div><dt>From</dt><dd>Northwind Labs Talent <span class="muted">talent@northwindlabs.io</span></dd></div>
+<div><dt>To</dt><dd>Alex Morgan</dd></div>
+<div><dt>Date</dt><dd>Wednesday, October 21, 2026 at 09:30</dd></div>
+<div><dt>Inbox</dt><dd>Work</dd></div>
+</dl>
+<div class="ml-text" tabindex="0" aria-label="Text of Thanks for applying: Staff AI Engineer">Thanks for applying to the Staff AI Engineer role at Northwind Labs. Our team reads every application and will be in touch.</div>
+
+<p class="proto-mail-line"><span class="muted">Linked to:</span> <a class="cell-link" href="#">Northwind Labs, Staff AI Engineer</a></p>
+<p class="proto-mail-line"><span class="muted">Why linked:</span> Filed by the app: the confirmation of your application</p>
+<div class="co-actions"><button class="btn btn-ghost" type="button" data-action="unlink" data-arg="m-confirm|company/northwind">Unlink from Northwind Labs</button><a class="btn btn-ghost" href="#" data-out="app">Open in Gmail</a></div>
+</div></div></details>
+
+</div></details></td></tr>
+</tbody>
+</table>
+</div>
+
+</div>
+</section>
+</div>
+<div class="co-right">
+<section class="co-sec" aria-labelledby="co-ppl-h">
+<h2 class="co-h2" id="co-ppl-h">People</h2>
+<div class="grid-box">
+<div class="grid-scroll" role="region" aria-label="People at Northwind Labs" tabindex="0">
+<table class="grid">
+<thead><tr><th scope="col">Name</th><th scope="col">Role</th><th scope="col">Contacted</th><th scope="col">Email</th></tr></thead>
+<tbody>
+<tr class="proto-row" data-action="open" data-arg="#/person/p-dana?from=company/northwind">
+<td><a class="cell-link" href="#">Dana Levi</a></td>
+<td>Recruiter</td>
+<td class="yes">Call, Oct 27</td>
+<td>dana@northwindlabs.io</td>
+</tr><tr class="proto-row" data-action="open" data-arg="#/person/p-2?from=company/northwind">
+<td><a class="cell-link" href="#">Maya Cohen</a> <span class="mark mark-good">New</span></td>
+<td>Hiring manager</td>
+<td class="yes">Email in, Oct 28</td>
+<td>maya@northwindlabs.io</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+</div>
+</section>
+<section class="co-sec" aria-labelledby="co-mail-h">
+<h2 class="co-h2" id="co-mail-h">Emails (3)</h2>
+<ol class="ml-chain" aria-label="Emails, oldest first">
+<li><details class="co-fold ml-email" id="em-m-confirm"><summary><span class="ml-when">Oct 21</span> <span class="ml-who">From Northwind Labs Talent:</span> <span class="ml-subject">Thanks for applying: Staff AI Engineer</span></summary><div class="co-fold-body"><div class="proto-mail-card">
+<p class="proto-mail-subject">Thanks for applying: Staff AI Engineer</p>
+<dl class="co-glance proto-mail-meta">
+<div><dt>From</dt><dd>Northwind Labs Talent <span class="muted">talent@northwindlabs.io</span></dd></div>
+<div><dt>To</dt><dd>Alex Morgan</dd></div>
+<div><dt>Date</dt><dd>Wednesday, October 21, 2026 at 09:30</dd></div>
+<div><dt>Inbox</dt><dd>Work</dd></div>
+</dl>
+<div class="ml-text" tabindex="0" aria-label="Text of Thanks for applying: Staff AI Engineer">Thanks for applying to the Staff AI Engineer role at Northwind Labs. Our team reads every application and will be in touch.</div>
+
+<p class="proto-mail-line"><span class="muted">Linked to:</span> <a class="cell-link" href="#">Northwind Labs, Staff AI Engineer</a></p>
+<p class="proto-mail-line"><span class="muted">Why linked:</span> Filed by the app: the confirmation of your application</p>
+<div class="co-actions"><button class="btn btn-ghost" type="button" data-action="unlink" data-arg="m-confirm|company/northwind">Unlink from Northwind Labs</button><a class="btn btn-ghost" href="#" data-out="app">Open in Gmail</a></div>
+</div></div></details></li><li><details class="co-fold ml-email" id="em-m-dana"><summary><span class="ml-when">Oct 24</span> <span class="ml-who">From Dana Levi:</span> <span class="ml-subject">Quick chat this week?</span></summary><div class="co-fold-body"><div class="proto-mail-card">
+<p class="proto-mail-subject">Quick chat this week?</p>
+<dl class="co-glance proto-mail-meta">
+<div><dt>From</dt><dd><a class="cell-link" href="#">Dana Levi</a> <span class="muted">dana@northwindlabs.io</span></dd></div>
+<div><dt>To</dt><dd>Alex Morgan</dd></div>
+<div><dt>Date</dt><dd>Saturday, October 24, 2026 at 10:05</dd></div>
+<div><dt>Inbox</dt><dd>Work</dd></div>
+</dl>
+<div class="ml-text" tabindex="0" aria-label="Text of Quick chat this week?">Hi Alex,
+
+Thanks for applying to the Staff AI Engineer role. Do you have 30 minutes on Tuesday for a quick chat?
+
+Dana Levi
+Recruiter, Northwind Labs</div>
+<p class="proto-mail-line"><span class="muted">Thread:</span> Oct 28, Maya Cohen: Re: Quick chat this week? <span class="muted">(on Northwind Labs)</span></p>
+<p class="proto-mail-line"><span class="muted">Linked to:</span> <a class="cell-link" href="#">Northwind Labs, Staff AI Engineer</a></p>
+<p class="proto-mail-line"><span class="muted">Why linked:</span> Filed by the app: from northwindlabs.io, names the Staff AI Engineer role</p>
+<div class="co-actions"><button class="btn btn-ghost" type="button" data-action="unlink" data-arg="m-dana|company/northwind">Unlink from Northwind Labs</button><a class="btn btn-ghost" href="#" data-out="app">Open in Gmail</a></div>
+</div></div></details></li><li><details class="co-fold ml-email" id="em-m-maya"><summary><span class="ml-when">Oct 28</span> <span class="ml-who">From Maya Cohen:</span> <span class="ml-subject">Re: Quick chat this week?</span> <span class="mark mark-good">Just linked</span></summary><div class="co-fold-body"><div class="proto-mail-card">
+<p class="proto-mail-subject">Re: Quick chat this week?</p>
+<dl class="co-glance proto-mail-meta">
+<div><dt>From</dt><dd><a class="cell-link" href="#">Maya Cohen</a> <span class="muted">maya@northwindlabs.io</span></dd></div>
+<div><dt>To</dt><dd>Alex Morgan</dd></div>
+<div><dt>Date</dt><dd>Wednesday, October 28, 2026 at 16:40</dd></div>
+<div><dt>Inbox</dt><dd>Work</dd></div>
+</dl>
+<div class="ml-text" tabindex="0" aria-label="Text of Re: Quick chat this week?">Hi Alex,
+
+Thanks for the call with Dana on Tuesday. She passed on her notes, and I'd like to move you forward for the Staff AI Engineer role at Northwind Labs.
+
+Next step: a technical chat with me and one of our staff engineers, about 60 minutes. Does Nov 3 work? Any time after 10:00 CET is fine.
+
+Best,
+Maya Cohen
+Hiring manager, Northwind Labs</div>
+<p class="proto-mail-line"><span class="muted">Thread:</span> Oct 24, Dana Levi: Quick chat this week? <span class="muted">(on Northwind Labs)</span></p>
+<p class="proto-mail-line"><span class="muted">Linked to:</span> <a class="cell-link" href="#">Northwind Labs, Staff AI Engineer</a></p>
+<p class="proto-mail-line"><span class="muted">Why linked:</span> Same thread as Dana Levi's email, names Northwind Labs and the Staff AI Engineer role</p>
+<div class="co-actions"><button class="btn btn-ghost" type="button" data-action="unlink" data-arg="m-maya|company/northwind">Unlink from Northwind Labs</button><a class="btn btn-ghost" href="#" data-out="app">Open in Gmail</a></div>
+</div></div></details></li>
+</ol>
+<p class="proto-missing muted">Missing one? <a class="cell-link" href="#">Add missing email</a></p>
+</section>
+</div>
+</div>
+</div>
+</main>
+</div></div>
+
+
+
+
+
+<div style="position: absolute; left: 0px; top: 0px; width: 0px; height: 0px; z-index: 9998;"></div><script src="proto-kit.js"></script>
+</body></html>

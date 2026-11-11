@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>acme jobtrack (prototype)</title>
+<link rel="stylesheet" href="app.css">
+<style>.proto-hints :is(a[href^="#/"]:not([data-out]), [data-action]:not(form), [data-change], [data-input], summary, form[data-action] [type=submit]){outline:2px solid rgba(37,99,235,.85)!important;outline-offset:1px;border-radius:4px}.proto-hints :is(a[href], button, [role=button], select, input[type=checkbox], input[type=radio], summary, [data-action]:not(form)):not(:is(a[href^="#/"]:not([data-out]), [data-action]:not(form), [data-change], [data-input], summary, form[data-action] [type=submit])){outline:2px dashed rgba(120,113,108,.9)!important;outline-offset:1px;border-radius:4px}</style></head>
+<body>
+<div id="app"><div class="shell" data-shell="">
+<header class="topbar">
+<a class="brand" href="#"><span class="brand-dot" aria-hidden="true"></span><span>acme <span class="brand-sub">jobtrack</span></span></a>
+<button type="button" class="btn btn-ghost" data-action="toggleMenu" aria-expanded="false" aria-controls="sidebar"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>Menu</button>
+</header>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="#"><span class="brand-dot" aria-hidden="true"></span><span>acme<br><span class="brand-sub">jobtrack</span></span></a>
+<nav class="nav" aria-label="Main">
+<a class="nav-link" href="#">Today <span class="nav-count">5</span></a>
+<a class="nav-link" href="#">Changes <span class="nav-count">1</span></a>
+<a class="nav-link" href="#" data-out="app">All opportunities <span class="nav-count">33</span></a>
+<p class="nav-section">Offers</p>
+<a class="nav-link" href="#" data-out="app">Product build <span class="nav-count">11</span></a><a class="nav-link" href="#" data-out="app">Code review <span class="nav-count">9</span></a><a class="nav-link" href="#" data-out="app">Team workshops <span class="nav-count">5</span></a>
+<p class="nav-section">Jobs</p>
+<a class="nav-link" href="#">Applications <span class="nav-count">8</span></a>
+<a class="nav-link" href="#" aria-current="page">To confirm <span class="nav-count">3</span></a>
+<p class="nav-section">Add leads</p>
+<a class="nav-link" href="#" data-out="app">Find leads</a>
+<a class="nav-link" href="#" data-out="app">Import</a>
+<div class="nav-gap" aria-hidden="true"></div>
+<a class="nav-link" href="#" data-out="app">Settings</a>
+</nav>
+</aside>
+<main class="main" id="main">
+
+<header class="page-head">
+<div class="page-titles">
+
+<h1>To confirm</h1>
+<p class="page-sub">The app found where these emails belong. Nothing is linked until you confirm.</p>
+</div>
+
+</header>
+
+<div class="grid-box">
+<div class="grid-scroll" role="region" aria-label="Emails to confirm" tabindex="0">
+<table class="grid">
+<thead><tr><th scope="col">From</th><th scope="col">Subject</th><th scope="col">Date</th><th scope="col">The app thinks</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+<tbody>
+<tr class="proto-row" data-action="toggleMail" data-arg="confirm|m-topgig" aria-expanded="false">
+<td>Topgig Matching</td>
+<td class="proto-subject"><button type="button" class="proto-mail-btn" data-action="toggleMail" data-arg="confirm|m-topgig" aria-expanded="false">New match: Lead AI Engineer at Kestrel Bio</button></td>
+<td>Oct 29</td>
+<td class="wrap proto-guess-cell"><span class="proto-guess">New lead: Kestrel Bio, Lead AI Engineer</span> <span class="mark mark-info">New company</span><span class="proto-sub">A new company: Kestrel Bio is not in your applications yet.</span></td>
+<td><div class="cell-flex"><button class="btn btn-link" type="button" data-action="confirm" data-arg="m-topgig" aria-label="Confirm: New match: Lead AI Engineer at Kestrel Bio">Confirm</button><button class="btn btn-link" type="button" data-action="notThis" data-arg="m-topgig" aria-label="Not this one: New match: Lead AI Engineer at Kestrel Bio">Not this one</button></div></td>
+</tr><tr class="proto-row" data-action="toggleMail" data-arg="confirm|m-sam" aria-expanded="false">
+<td>Sam Rivera</td>
+<td class="proto-subject"><button type="button" class="proto-mail-btn" data-action="toggleMail" data-arg="confirm|m-sam" aria-expanded="false">Two AI roles that fit you</button></td>
+<td>Oct 29</td>
+<td class="wrap proto-guess-cell"><span class="proto-guess">Orbital Payments, Staff AI Engineer</span> <span class="mark mark-warn">Unsure</span><span class="proto-sub">Names Orbital Payments, but also a client it does not name.</span></td>
+<td><div class="cell-flex"><button class="btn btn-link" type="button" data-action="confirm" data-arg="m-sam" aria-label="Confirm: Two AI roles that fit you">Confirm</button><button class="btn btn-link" type="button" data-action="notThis" data-arg="m-sam" aria-label="Not this one: Two AI roles that fit you">Not this one</button></div></td>
+</tr><tr class="proto-row" data-action="toggleMail" data-arg="confirm|m-maya" aria-expanded="false">
+<td>Maya Cohen</td>
+<td class="proto-subject"><button type="button" class="proto-mail-btn" data-action="toggleMail" data-arg="confirm|m-maya" aria-expanded="false">Re: Quick chat this week?</button></td>
+<td>Oct 28</td>
+<td class="wrap proto-guess-cell"><span class="proto-guess">Northwind Labs, Staff AI Engineer</span> <span class="mark mark-good">Sure</span><span class="proto-sub">Same thread as Dana Levi's email, names Northwind Labs and the Staff AI Engineer role.</span></td>
+<td><div class="cell-flex"><button class="btn btn-link" type="button" data-action="confirm" data-arg="m-maya" aria-label="Confirm: Re: Quick chat this week?">Confirm</button><button class="btn btn-link" type="button" data-action="notThis" data-arg="m-maya" aria-label="Not this one: Re: Quick chat this week?">Not this one</button></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="grid-foot">Click an email to read it here.</p>
+</div>
+</main>
+</div></div>
+
+
+
+
+
+<div style="position: absolute; left: 0px; top: 0px; width: 0px; height: 0px; z-index: 9998;"></div><script src="proto-kit.js"></script>
+</body></html>

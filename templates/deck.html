@@ -26,34 +26,37 @@
     --line:#273150; --accent:#6ea8ff; --accent2:#9d7bff; --ok:#4ade80; --warn:#fbbf24;
     --bad:#fb7185; --chip-you:#fbbf24; --chip-agent:#6ea8ff; --chip-fyi:#8b96ad;
     --intent:#c4a5ff; --boundary:#5eead4;
+    /* one quiet tint for boxes that used to carry their own gradient */
+    --tint:rgba(110,168,255,.07); --tint-line:rgba(110,168,255,.22);
+    --ok-tint:rgba(74,222,128,.10); --warn-tint:rgba(251,191,36,.10);
   }
   html[data-theme="light"] {
     --bg:#f4f7fc; --panel:#ffffff; --panel2:#edf2fa; --ink:#18223a; --muted:#5d6c87;
     --line:#dbe3f0; --accent:#2f6df0; --accent2:#7c3aed; --ok:#15803d; --warn:#b45309;
     --bad:#be123c; --chip-you:#b45309; --chip-agent:#2f6df0; --chip-fyi:#64748b;
     --intent:#7c3aed; --boundary:#0f766e;
+    --tint:rgba(47,109,240,.06); --tint-line:rgba(47,109,240,.22);
+    --ok-tint:rgba(21,128,61,.08); --warn-tint:rgba(180,83,9,.08);
   }
   * { box-sizing:border-box; }
   /* keep interactive elements clear of the floating dock when auto-scrolled into view */
   .card, .card-head, .mock, .mock-zoom, .opt, .btn, textarea { scroll-margin-bottom:110px; }
   body { margin:0; color:var(--ink);
     background:var(--bg);
-    background-image:radial-gradient(1200px 500px at 20% -10%, rgba(110,168,255,.08), transparent),
-      radial-gradient(900px 500px at 90% 0%, rgba(157,123,255,.07), transparent);
+    background-image:radial-gradient(1200px 500px at 20% -10%, rgba(110,168,255,.05), transparent),
+      radial-gradient(900px 500px at 90% 0%, rgba(157,123,255,.04), transparent);
     background-attachment:fixed;
-    font:16px/1.7 "Inter","SF Pro Text","Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+    font:15.5px/1.6 "Inter","SF Pro Text","Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
     -webkit-font-smoothing:antialiased; }
   .wrap { max-width:980px; margin:0 auto; padding:36px 24px 160px; }
   header { padding-bottom:6px; }
-  h1 { font-size:32px; line-height:1.25; margin:0 0 6px; letter-spacing:-.02em;
-    background:linear-gradient(90deg,var(--ink) 30%,var(--accent) 75%,var(--accent2));
-    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  h1 { font-size:30px; line-height:1.2; margin:0 0 6px; letter-spacing:-.02em; color:var(--ink); }
   .meta { color:var(--muted); font-size:13.5px; }
   .lead { color:#c0cade; font-size:15.5px; margin:12px 0 18px; }
-  h2 { font-size:14px; text-transform:uppercase; letter-spacing:.08em; color:var(--accent);
-    margin:38px 0 10px; font-weight:700; display:flex; align-items:center; gap:8px; }
-  h2::after { content:""; flex:1; height:1px; background:linear-gradient(90deg,var(--line),transparent); }
-  .sechint { font-size:14px; color:var(--muted); margin:-4px 0 14px; }
+  h2 { font-size:12.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--accent);
+    margin:44px 0 10px; font-weight:700; display:flex; align-items:center; gap:10px; }
+  h2::after { content:""; flex:1; height:1px; background:var(--line); }
+  .sechint { font-size:14px; color:var(--muted); margin:-4px 0 14px; max-width:72ch; line-height:1.55; }
   .md p { margin:7px 0; }
   .md ul { margin:7px 0; padding-left:4px; list-style:none; }
   .md li { margin:5px 0; padding:6px 10px 6px 30px; position:relative;
@@ -65,9 +68,9 @@
     font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
 
   /* goal — shout it */
-  .goal { display:none; margin:18px 0 0; padding:16px 18px; border-radius:14px;
-    background:linear-gradient(135deg, rgba(110,168,255,.12), rgba(157,123,255,.10));
-    border:1px solid rgba(110,168,255,.35); }
+  .goal { display:none; margin:18px 0 0; padding:16px 20px; border-radius:12px;
+    background:var(--tint); border:1px solid var(--tint-line);
+    box-shadow:inset 3px 0 0 var(--accent); }
   .goal.show { display:block; }
   .goal .goal-k { font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
     color:var(--accent); margin-bottom:4px; }
@@ -121,14 +124,15 @@
   .card.answered { border-color:rgba(74,222,128,.4);
     background:linear-gradient(180deg, rgba(74,222,128,.04), transparent 50%), var(--panel); }
   .card.questioned { border-color:rgba(251,191,36,.4); }
-  /* answered cards recede so the unanswered ones stand out (always-on, every width) */
-  .card.answered:not(.open):not(:hover) { opacity:.62; }
-  .card.answered:not(.open):hover { opacity:1; }
+  /* answered cards recede so the unanswered ones stand out (always-on, every width), open or
+     closed: an answered card left expanded is still answered. The one you are in (pointer or
+     focus) stays full. */
+  .card.answered:not(:hover):not(:focus-within) { opacity:.62; }
   /* "show what's left" filter: hide everything that isn't still asking for
      your input — answered cards, dismissed cards, AND steps (steps are
-     editable artifacts, never an open to-do). Never hide an open card (you may
-     be reviewing it) or one with an open question (still needs the agent). */
-  body.hide-done .card.answered:not(.open):not(.questioned),
+     editable artifacts, never an open to-do). Never hide the answered card you
+     are typing in (a button pick hides it at once) or one with an open question (still needs the agent). */
+  body.hide-done .card.answered:not(.questioned):not(:has(textarea:focus, input:focus, select:focus)),
   body.hide-done .card.kind-step:not(.open),
   body.hide-done .card.dismissed:not(.open) { display:none; }
   /* in "what's left" mode, also hide the steps section's heading/intro/add-row
@@ -157,13 +161,7 @@
     vertical-align:top; }
   .md th { background:var(--panel2); font-weight:700; color:var(--ink); white-space:nowrap; }
   .md td code, .md th code { white-space:nowrap; }
-  .left-toggle { flex:0 0 auto; border:1px solid var(--line); background:var(--panel2);
-    color:var(--muted); border-radius:999px; padding:4px 13px; font:inherit; font-size:12.5px;
-    font-weight:650; cursor:pointer; white-space:nowrap; display:none;
-    transition:border-color .12s, color .12s, background .12s; }
-  .left-toggle:hover { border-color:var(--accent); color:var(--ink); }
-  .left-toggle.on { border-color:var(--accent); color:var(--accent); background:rgba(110,168,255,.14); }
-  .left-toggle.show { display:inline-block; }
+  .btn.left-toggle.on { border-color:var(--accent); color:var(--accent); background:rgba(110,168,255,.14); }
   /* head: a grid so the title row never gets crushed by the quick buttons,
      which live on their own second row */
   .card-head { display:grid;
@@ -237,7 +235,7 @@
     background:var(--panel); color:var(--ink); }
   textarea.ainput { min-height:60px; resize:vertical; }
   select.ainput { cursor:pointer; }
-  .ainput:focus { outline:none; border-color:var(--accent); }
+  .ainput:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--tint); }
   .averify { display:grid; gap:6px; }
   /* agent grill / clarifying questions on a card */
   .grill-blk { border:1px solid var(--warn); border-radius:10px; padding:12px;
@@ -260,9 +258,9 @@
   .grill-me:disabled { opacity:.5; cursor:default; }
   .grill-state { color:var(--muted); font-size:13px; }
   /* interview / redesign panel — sits above the intents */
-  .interview { margin:16px 0 22px; padding:16px 18px; border-radius:14px;
-    background:linear-gradient(135deg, rgba(251,191,36,.10), rgba(157,123,255,.08));
-    border:1px solid rgba(251,191,36,.35); }
+  .interview { margin:16px 0 22px; padding:16px 20px; border-radius:12px;
+    background:var(--panel); border:1px solid var(--line);
+    box-shadow:inset 3px 0 0 var(--warn); }
   .iv-row { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
   .iv-ico { font-size:26px; line-height:1; flex:0 0 auto; }
   .iv-text { flex:1 1 320px; min-width:0; }
@@ -416,7 +414,7 @@
   textarea { width:100%; margin-top:10px; background:var(--panel2); color:var(--ink);
     border:1px solid var(--line); border-radius:10px; padding:11px 14px; font:inherit; font-size:15px;
     resize:vertical; min-height:52px; transition:border-color .12s; }
-  textarea:focus { outline:none; border-color:var(--accent); }
+  textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--tint); }
   textarea::placeholder { color:var(--muted); }
   textarea.qbox { border-color:rgba(251,191,36,.4); }
   textarea.qbox:focus { border-color:var(--warn); }
@@ -660,6 +658,361 @@
   html[data-theme="light"] .edge-label { fill:#47526b; }
   html[data-theme="light"] .diagram { background:linear-gradient(135deg, rgba(47,109,240,.05), rgba(124,58,237,.04));
     border-color:rgba(47,109,240,.18); }
+  /* the design: rows of step screenshots (one row per option or walk-through), full screen with pinned notes */
+  .fl-rows { --z:.14; display:flex; flex-direction:column; gap:12px; margin-top:12px; }
+  .fl-row { border:2px solid var(--line); border-radius:12px; padding:12px; background:var(--panel); transition:opacity .15s; }
+  .fl-row.sel { border-color:var(--ok); background:rgba(74,222,128,.08); }
+  .fl-rows:has(.fl-row.sel) .fl-row:not(.sel) { opacity:.6; }
+  .fl-rows:has(.fl-row.sel) .fl-row:not(.sel):hover { opacity:.9; }
+  .fl-rowhead { display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px; margin-bottom:10px; }
+  .fl-name { font-weight:700; font-size:15px; }
+  .fl-cap { color:var(--muted); font-size:13px; flex:1 1 220px; min-width:0; }
+  .fl-acts { display:flex; gap:8px; margin-left:auto; }
+  .fl-acts .opt { min-height:40px; padding:8px 14px; font-size:14px; }
+  .fl-count { color:var(--warn); font-size:12px; font-weight:600; }
+  .fl-count:empty { display:none; }
+  .fl-pick-on { display:none; }
+  .sel .fl-pick-on, .fl-pick.sel .fl-pick-on { display:inline; }
+  .sel .fl-pick-off, .fl-pick.sel .fl-pick-off { display:none; }
+  .fl-row.sel .fl-pick, .fl-pick.sel { border-color:var(--ok); color:var(--ok); font-weight:700; }
+  .fl-strip { display:flex; align-items:flex-start; gap:0; overflow-x:auto; padding-bottom:4px; }
+  .fl-screen { flex:none; display:flex; flex-direction:column; gap:6px; }
+  .fl-sname { font-size:12px; color:var(--muted); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    max-width:calc(var(--w, 1280) * var(--z) * 1px); }
+  .fl-screen-btn { display:block; padding:0; border:1px solid var(--line); border-radius:8px; background:none; cursor:zoom-in; }
+  .fl-screen-btn:hover, .fl-screen-btn:focus-visible { border-color:var(--accent); outline:none; box-shadow:0 0 0 2px var(--accent); }
+  .fl-thumb { position:relative; width:calc(var(--w) * var(--z) * 1px); height:calc(var(--h) * var(--z) * 1px);
+    overflow:hidden; border-radius:7px; background:#fff; }
+  .fl-thumb iframe { border:0; display:block; transform:scale(var(--z)); transform-origin:0 0; pointer-events:none; background:#fff; }
+  .fl-pin { position:absolute; z-index:2; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%;
+    background:var(--warn); color:#111; border:2px solid #fff; font-size:11px; font-weight:800; line-height:18px; text-align:center;
+    box-shadow:0 2px 6px rgba(0,0,0,.35); pointer-events:none; }
+  .fl-pin.pending { background:transparent; border:2px dashed var(--warn); }
+  .fl-arrow { flex:none; align-self:center; width:var(--arrow-w, 76px); display:flex; flex-direction:column; align-items:center;
+    gap:4px; padding:18px 6px 0; color:var(--muted); }
+  .fl-arrow-line { position:relative; width:100%; height:2px; background:var(--muted); }
+  .fl-arrow-line::after { content:""; position:absolute; right:-1px; top:-5px; border:6px solid transparent; border-left:8px solid var(--muted); border-right:0; }
+  .fl-arrow-label { font-size:11px; line-height:1.3; text-align:center; }
+
+  /* full screen: the prototype live, with a bar and notes beside it */
+  body.fl-lock { overflow:hidden; }
+  .fc, .fv { position:fixed; inset:0; z-index:8000; display:flex; flex-direction:column; background:var(--bg); color:var(--ink); }
+  .fv { z-index:8500; opacity:0; transition:opacity .16s ease; }
+  .fv.open { opacity:1; }
+  .fv .fc-bar { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:8px; }
+  .fv .fc-title { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  .fv .fc-title small { overflow:hidden; text-overflow:ellipsis; color:var(--accent); }
+  .fv .fc-btn:disabled { opacity:.4; cursor:default; }
+  .fv .fc-tools { min-width:0; }
+  .fv .fc-bar > .fc-tools:last-child { grid-column:1 / -1; }
+  .fv .fv-device iframe { position:absolute; inset:0; }
+  .fv .fv-device[aria-busy="true"] { pointer-events:none; }
+  @media (max-width:760px) {
+    .fv .fc-bar { padding:8px; }
+    .fv .fv-stage { flex:1 1 auto; min-height:0; }
+    .fv .fv-side { flex:0 1 30%; }
+    .fv .fc-btn { padding:0 10px; min-width:44px; }
+    .fv .fv-vars { width:100%; }
+    .fv .fv-vars:empty { display:none; }
+  }
+  .fc[hidden], .fv[hidden] { display:none; }
+  .fc-bar { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel); }
+  .fc-title { font-weight:700; font-size:16px; flex:1 1 240px; min-width:0; }
+  .fc-title small { display:block; color:var(--muted); font-weight:500; font-size:12.5px; }
+  .fc-tools { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+  .fc-btn { min-width:40px; min-height:40px; padding:0 12px; border-radius:10px; border:1px solid var(--line); background:var(--panel2);
+    color:var(--ink); font:inherit; font-size:14px; cursor:pointer; }
+  .fc-btn:hover { border-color:var(--accent); }
+  .fc-btn.sel { border-color:var(--accent); background:rgba(110,168,255,.16); font-weight:700; }
+  /* Play: one screen at a time, live, with notes beside it */
+  .fv-main { flex:1 1 auto; min-height:0; display:flex; }
+  .fv-stage { flex:1 1 auto; min-width:0; position:relative; display:flex; align-items:center; justify-content:center; padding:16px;
+    background-color:var(--bg); background-image:radial-gradient(var(--line) 1px, transparent 1px); background-size:22px 22px; }
+  .fv-device { position:relative; flex:none; overflow:hidden; border-radius:10px; background:#fff; box-shadow:0 10px 40px rgba(0,0,0,.4); }
+  .fv-device iframe { border:0; display:block; transform-origin:0 0; background:#fff; }
+  .fv-pins { position:absolute; inset:0; pointer-events:none; }
+  .fv-catch { position:absolute; inset:0; z-index:3; cursor:crosshair; background:rgba(251,191,36,.08); outline:3px dashed var(--warn); outline-offset:-3px; }
+  .fv-catch[hidden] { display:none; }
+  .fv-side { flex:0 0 320px; width:320px; overflow:auto; padding:14px 16px; border-left:1px solid var(--line); background:var(--panel);
+    display:flex; flex-direction:column; gap:10px; }
+  .fv-h { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:700; margin-top:6px; }
+  .fv-steps { display:flex; flex-direction:column; gap:4px; }
+  .fv-steps button { display:flex; gap:8px; align-items:center; min-height:40px; padding:6px 10px; text-align:left; border-radius:10px;
+    border:1px solid var(--line); background:var(--panel2); color:var(--ink); font:inherit; font-size:13.5px; cursor:pointer; }
+  .fv-steps button.on { border-color:var(--accent); background:rgba(110,168,255,.16); font-weight:700; }
+  .fv-steps .n { flex:none; width:22px; height:22px; border-radius:50%; display:inline-grid; place-items:center; font-size:11px;
+    font-weight:800; background:var(--line); }
+  .fv-notes { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px; }
+  .fv-notes li { display:flex; gap:8px; align-items:flex-start; padding:8px 10px; border-radius:10px; background:var(--panel2);
+    border:1px solid var(--line); font-size:13.5px; line-height:1.45; }
+  .fv-notes li .n { flex:none; width:22px; height:22px; border-radius:50%; display:inline-grid; place-items:center; font-size:11px;
+    font-weight:800; background:var(--warn); color:#111; }
+  .fv-notes li .n.whole { background:var(--line); color:var(--ink); }
+  .fv-notes li .tx { flex:1 1 auto; min-width:0; white-space:pre-wrap; }
+  .fv-notes li .meta { display:block; color:var(--muted); font-size:11.5px; }
+  .fv-notes li button { flex:none; border:0; background:none; color:var(--muted); cursor:pointer; min-width:32px; min-height:32px; }
+  .fv-empty { color:var(--muted); font-size:13px; }
+  @media (max-width:760px){
+    .fv-main { flex-direction:column; }
+    .fv-stage { flex:0 0 62vh; padding:8px; }
+    .fv-side { flex:1 1 auto; width:auto; border-left:0; border-top:1px solid var(--line); }
+  }
+  /* the design section: the prototype's journeys, forks tried in place, notes */
+  .ds-top { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:6px 0 14px; }
+  .ds-top .btn { font-size:15px; }
+  .ds-state { color:var(--muted); font-size:13px; }
+  .ds-notes { margin-top:16px; padding:12px 14px; border-radius:12px; border:1px solid var(--line); background:var(--panel2); }
+  .ds-notes .lbl { margin:0 0 8px; }
+  .ds-notes ol { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px; }
+  .ds-notes li { display:flex; gap:10px; align-items:flex-start; font-size:13.5px; line-height:1.45; }
+  .ds-notes li .where { color:var(--muted); font-size:12px; display:block; }
+  .ds-notes li .reply { display:block; margin-top:2px; color:var(--ok); font-size:12.5px; }
+  .ds-notes li .reply.wait { color:var(--muted); }
+  .ds-notes li .tx { flex:1 1 auto; min-width:0; white-space:pre-wrap; }
+  .ds-notes li button { flex:none; min-height:32px; padding:4px 10px; border-radius:8px; border:1px solid var(--line);
+    background:var(--panel); color:var(--ink); font:inherit; font-size:12.5px; cursor:pointer; }
+  .fv-vars { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+  .fv-var { display:inline-flex; align-items:center; gap:2px; padding:2px; border:1px solid var(--line); border-radius:12px; }
+  .fv-var .nm { padding:0 8px; font-size:12.5px; color:var(--muted); }
+  .fv-var button { min-width:36px; min-height:36px; border:0; border-radius:9px; background:none; color:var(--ink); font:inherit;
+    font-weight:700; cursor:pointer; }
+  .fv-var button.on { background:rgba(110,168,255,.2); color:var(--accent); }
+  .fv-var button.picked::after { content:"✓"; margin-left:2px; color:var(--ok); }
+  .fv.no-side .fv-side { display:none; }
+  .fl-rows { --z:.21; }
+  .fl-shot img { display:block; width:100%; height:100%; object-fit:cover; object-position:top left; background:#fff; }
+  .ds-h { margin:22px 0 4px; font-size:16px; }
+  .fv-stage { position:relative; }
+  .fv-tip { position:absolute; left:50%; top:10px; transform:translateX(-50%); z-index:5; padding:6px 12px; border-radius:999px;
+    background:var(--warn); color:#111; font-size:12.5px; font-weight:600; box-shadow:0 4px 14px rgba(0,0,0,.3); white-space:nowrap; }
+  .fv-tip[hidden] { display:none; }
+  .fv-pin { pointer-events:auto; cursor:pointer; padding:0; }
+  .fv-pins { z-index:3; }
+  .fv-bubble { position:absolute; z-index:6; width:286px; padding:10px; border-radius:12px; border:1px solid var(--line);
+    background:var(--panel); color:var(--ink); box-shadow:0 14px 40px rgba(0,0,0,.4); display:flex; flex-direction:column; gap:8px; }
+  .fv-bubble-on { font-size:12px; color:var(--muted); }
+  .fv-bubble textarea { min-height:70px; }
+  .fv-bubble-acts { display:flex; flex-wrap:wrap; gap:6px; }
+  .fv-bubble-acts .opt { min-height:36px; padding:6px 12px; font-size:13.5px; }
+  .fl-review.sel.r-ok { border-color:var(--ok); color:var(--ok); font-weight:700; background:rgba(74,222,128,.12); }
+  .fl-review.sel.r-skip { border-color:var(--muted); color:var(--muted); font-weight:700; }
+  .fl-row[data-review="skip"] .fl-strip { opacity:.45; }
+  .fl-row[data-review="ok"] { border-color:var(--ok); }
+  .show-me { flex:none; min-height:34px; padding:4px 12px; font-size:13px; border-radius:999px; }
+  /* an intent with screens: its words on the left, its flow's screens on the right, top to bottom */
+  .card.open .card-body.with-screens { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:0 22px; align-items:start; }
+  .card-screens { --z:.27; display:flex; flex-direction:column; margin-top:16px; }
+  .fl-down { display:flex; align-items:center; gap:8px; padding:6px 0 6px 12px; color:var(--muted); font-size:12px; line-height:1.3; }
+  .fl-down::before { content:"↓"; font-size:16px; }
+  /* narrow: stacked, the screens right after the intent's words */
+  @media (max-width:900px){
+    .card.open .card-body.with-screens { display:flex; flex-direction:column; }
+    .with-screens > .card-main { display:contents; }
+    .with-screens > .card-main > :first-child { order:-2; }
+    .card-screens { order:-1; --z:.24; }
+  }
+
+  /* ===== polish (Nov 2026): calmer surfaces, one button system, obvious card state, focus,
+     phone tap targets. Later rules only: no selector hook above changes. ===== */
+
+  /* calmer surfaces: one tint instead of a gradient per box */
+  .diagram { background:var(--tint); border-color:var(--tint-line); }
+  .mocks-lead { background:var(--tint); border-color:var(--tint-line); }
+  .tradeoffs li { background:var(--tint); border-color:transparent; }
+  .md li { background:var(--tint); }
+  .card.answered { background:var(--panel); }
+  .ht-step, .related, .intent-view { border-radius:10px; }
+  .ref { border-radius:12px; }
+  .card { border-radius:12px; margin-bottom:10px; box-shadow:none; }
+  .card:hover { border-color:var(--tint-line); }
+  .card.open { border-color:var(--tint-line); box-shadow:0 6px 24px rgba(0,0,0,.18); }
+  .card-head { padding:13px 18px 13px 16px; }
+  .card-title .t { font-size:16px; line-height:1.35; }
+  .card-title .s { font-size:14px; line-height:1.45; margin-top:2px; }
+  .blk { margin-top:18px; }
+  .chip { font-size:11px; padding:3px 9px; }
+  .progress .bar { height:6px; }
+  .progress .txt { font-size:13.5px; color:var(--ink); }
+  .lead { color:var(--muted); }
+  .goal .goal-v { font-size:17.5px; }
+  /* every re-render adds a summary toggle after the newest one: show only the newest */
+  .lead-more + .lead-more { display:none; }
+
+  /* card state at a glance: a coloured edge on the left and a pill in the head */
+  .card { --edge:transparent; box-shadow:inset 3px 0 0 var(--edge); }
+  .card.open { box-shadow:inset 3px 0 0 var(--edge), 0 6px 24px rgba(0,0,0,.18); }
+  .card:not(.answered):not(.dismissed):not(.questioned):not(.has-grill):has(> .card-head .chip.you),
+  .card:not(.answered):not(.dismissed):not(.questioned):not(.has-grill):has(> .card-head .chip.intent) { --edge:var(--accent); }
+  .card.answered { --edge:var(--ok); }
+  .card.questioned, .card.has-grill { --edge:var(--warn); }
+  .card.dismissed { --edge:var(--muted); opacity:.45; }
+  .card.dismissed.open { opacity:.8; }
+  .state { font-size:12.5px; }
+  .state.set, .state.q, .state.grill { padding:2px 9px; border-radius:999px; font-weight:650; }
+  .state.set { background:var(--ok-tint); }
+  .state.q, .state.grill { background:var(--warn-tint); }
+
+  /* one button system: same height, weight, motion; no lift on hover */
+  .btn, .opt, .qbtn, .iv-btn, .iv-ghost, .iv-x, .iv-jump, .iv-tr-toggle, .fc-btn, .add-card, .left-toggle,
+  .lb-close, .mock-zoom, .icon-btn, .fv-steps button, .lead-more, .chat-send, .ds-notes li button, .fv-var button,
+  .grill-me, details.howto-d > summary {
+    transition:border-color .12s, background .12s, color .12s, box-shadow .12s, transform .08s; }
+  .btn, .opt, .iv-btn, .iv-ghost, .fc-btn, .add-card, .chat-send, .grill-me { min-height:40px; }
+  .opt { padding:8px 16px; font-size:14px; font-weight:600; }
+  .opt:hover { transform:none; }
+  .opt:not(.sel):hover { background:var(--tint); }
+  .opt:active, .qbtn:active, .btn:not(:disabled):active, .iv-btn:not(:disabled):active { transform:scale(.98); }
+  .qbtn { padding:6px 13px; font-size:12.5px; font-weight:600; }
+  .btn { border-radius:10px; padding:10px 20px; }
+  .btn:not(:disabled):hover { transform:none; box-shadow:0 0 0 3px var(--tint); }
+  .btn.final:not(:disabled):hover { box-shadow:0 0 0 3px var(--ok-tint); }
+  .btn.secondary:not(:disabled):hover { border-color:var(--accent); box-shadow:none; }
+  .iv-btn:hover:not(:disabled) { transform:none; box-shadow:0 0 0 3px var(--warn-tint); }
+  .mock:hover { transform:none; }
+  .icon-btn.drop { border-radius:10px; }
+  .fl-screen-btn { transition:border-color .12s, box-shadow .12s; }
+  .add-card { border-radius:10px; }
+  .fl-acts .opt { min-height:40px; }
+
+  /* keyboard focus: one ring everywhere */
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .card-head:focus-visible { outline-offset:-2px; }
+  textarea:focus-visible, .ainput:focus-visible, .iv-a:focus-visible, .chat-input:focus-visible { outline:none; }
+  .fl-screen-btn:focus-visible { outline:none; }
+
+  /* design strips */
+  .fl-row { border-width:1px; padding:14px; border-radius:12px; --edge:transparent; box-shadow:inset 3px 0 0 var(--edge); }
+  .fl-row.sel { --edge:var(--ok); background:var(--ok-tint); }
+  .fl-row[data-review="ok"] { --edge:var(--ok); }
+  .fl-rowhead { gap:6px 12px; margin-bottom:12px; }
+  .fl-name { font-size:15px; }
+  .fl-screen-btn { border-radius:10px; }
+  .fl-thumb { border-radius:9px; }
+  .show-me { min-height:36px; }
+
+  /* the floating dock */
+  .submitbar { border-radius:16px; }
+  .submitbar .status { font-size:13.5px; line-height:1.45; }
+  .submitbar .btn { min-height:40px; }
+
+  /* phone: every control at least 44px tall, nothing scrolls sideways but tables and strips */
+  @media (max-width:760px){
+    .btn, .opt, .qbtn, .iv-btn, .iv-ghost, .iv-x, .iv-jump, .iv-tr-toggle, .fc-btn, .add-card, .left-toggle,
+    .lead-more, .chat-send, .grill-me, .show-me, .fl-acts .opt, .fv-steps button, .fv-bubble-acts .opt,
+    .ds-notes li button, .fv-notes li button, .fv-var button, details.howto-d > summary { min-height:44px; }
+    .qbtn { padding:9px 14px; }
+    .lead-more { padding:10px 0; }
+    .icon-btn.drop, .lb-close, .mock-zoom, .theme-btn { width:44px; height:44px; }
+    .fv-del-cell { width:48px; }
+    .quick { gap:8px; }
+    .card-head { padding:12px 14px; }
+    .goal { padding:14px 16px; }
+    .interview { padding:14px 16px; }
+    h2 { margin-top:36px; }
+    .submitbar .btn { min-height:44px; padding:10px 12px; }
+    /* the dock in three rows: the status, the tools, then Send and Finalize side by side */
+    .submitbar #sendRound, .submitbar .btn.final { flex:1 1 42%; }
+    /* a strip's Try it and Pick stay on one line */
+    .fl-acts .opt { flex:0 0 auto; white-space:nowrap; }
+  }
+
+  /* motion: none when the system asks for less */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition:none !important; animation:none !important; }
+    .ask-pending::before, .iv-spin { border-top-color:var(--accent); }
+    .live-dot.connected::before { box-shadow:none; }
+  }
+
+  /* light theme: the new surfaces */
+  html[data-theme="light"] .card.open { box-shadow:inset 3px 0 0 var(--edge), 0 6px 20px rgba(23,36,66,.10); }
+  html[data-theme="light"] .tradeoffs li, html[data-theme="light"] .md li { background:var(--tint); }
+  html[data-theme="light"] .state.set { color:var(--ok); }
+  html[data-theme="light"] .state.q, html[data-theme="light"] .state.grill { color:var(--warn); }
+
+  /* ===== sections: fold a section from its heading, read its help on demand, and a menu of what is in the deck ===== */
+  .sec > h2 { margin-top:30px; cursor:pointer; user-select:none; min-height:32px; }
+  .sec > h2::after { order:1; }
+  .sec > h2, .sec .card { scroll-margin-top:72px; }
+  .sec-toggle { display:inline-flex; align-items:center; gap:8px; border:0; background:none; padding:4px 2px; margin:0;
+    font:inherit; letter-spacing:inherit; text-transform:inherit; color:inherit; cursor:pointer; border-radius:6px; white-space:nowrap; }
+  .sec-chev { font-size:9px; color:var(--muted); transform:rotate(90deg); transition:transform .12s; }
+  .sec-closed > h2 .sec-chev { transform:none; }
+  .sec-tail { text-transform:none; letter-spacing:0; font-weight:500; font-size:13px; color:var(--muted);
+    min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .sec-count { order:2; flex:0 0 auto; font-size:11.5px; letter-spacing:0; text-transform:none; font-weight:650; color:var(--muted);
+    padding:2px 9px; border-radius:999px; background:var(--tint); }
+  .sec-count:empty { display:none; }
+  .sec-count.done { color:var(--ok); background:var(--ok-tint); }
+  .sec-help { order:3; flex:0 0 auto; width:26px; height:26px; border-radius:50%; border:1px solid var(--line); background:none;
+    color:var(--muted); font:inherit; font-size:12px; font-weight:700; letter-spacing:0; cursor:pointer; padding:0;
+    transition:border-color .12s, color .12s, background .12s; }
+  .sec-help:hover, .sec-help[aria-pressed="true"] { border-color:var(--accent); color:var(--accent); background:var(--tint); }
+  .sec-closed > :not(h2) { display:none !important; }
+  .sec-closed > h2 .sec-help { display:none; }
+  .sec:not(.sec-hints) > .sechint, .sec:not(.sec-hints) > .loop-diagram { display:none; }
+
+  /* the menu shows sections; a section's cards show only for the one you are in or picked */
+  .toc li:not(.cur):not(.exp) > ol { display:none; }
+  /* the top of the page: summary, how it works and the interview open from one row of buttons */
+  .toprow { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 4px; }
+  .toprow:empty { display:none; }
+  .toprow button, .card-tools button { border:1px solid var(--line); background:none; color:var(--muted); font:inherit; font-size:13px;
+    font-weight:600; padding:5px 12px; border-radius:999px; cursor:pointer; transition:border-color .12s, color .12s, background .12s; }
+  .toprow button:hover, .toprow button[aria-expanded="true"], .card-tools button:hover, .card-tools button[aria-expanded="true"] {
+    border-color:var(--accent); color:var(--accent); background:var(--tint); }
+  .top-fold:not(.top-open), .top-fold:not(.top-open) + .lead-more { display:none !important; }
+  /* a card: the statement and the decision; edit, your own words and the agent open on demand */
+  .card-tools { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .chat-blk.chat-closed, textarea.own-closed { display:none; }
+  .lbl-row { display:flex; align-items:center; }
+  .lbl-row .lbl { margin:0; }
+  .lbl-row .intent-edit-btn { margin:0 0 0 10px; padding:1px 9px; min-height:0; font-size:11.5px; font-weight:600; letter-spacing:0;
+    text-transform:none; border-radius:999px; flex:0 0 auto; }
+  @media (max-width:760px) {
+    .toprow button, .card-tools button { min-height:44px; padding:8px 14px; }
+    .lbl-row .intent-edit-btn { min-height:44px; padding:8px 14px; }
+  }
+
+  .submitbar { z-index:40; }  /* above the sticky progress line, which used to draw over it */
+  .toc { display:none; position:fixed; z-index:45; background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:8px; overflow:auto; font-size:13px; line-height:1.35; }
+  .toc-h { font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); padding:6px 8px 8px; }
+  .toc ul, .toc ol { list-style:none; margin:0; padding:0; }
+  .toc button { display:flex; align-items:center; gap:8px; width:100%; border:0; background:none; color:var(--ink); font:inherit;
+    text-align:left; cursor:pointer; border-radius:8px; padding:6px 8px; min-width:0;
+    transition:background .12s, color .12s; }
+  .toc button:hover { background:var(--tint); }
+  .toc-sec { font-weight:650; }
+  .toc-sec .nm, .toc-card .nm { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .toc-sec .ct { flex:0 0 auto; font-size:11.5px; font-weight:650; color:var(--muted); }
+  .toc-sec.done .ct { color:var(--ok); }
+  .toc li.cur > .toc-sec { color:var(--accent); background:var(--tint); }
+  .toc-card { color:var(--muted); font-size:12.5px; padding:4px 8px 4px 14px; }
+  .toc-card::before { content:""; flex:0 0 auto; width:7px; height:7px; border-radius:50%; border:1.5px solid var(--muted); }
+  .toc-card.answered::before { background:var(--ok); border-color:var(--ok); }
+  .toc-card.questioned::before { background:var(--warn); border-color:var(--warn); }
+  .toc-card.dismissed { opacity:.5; text-decoration:line-through; }
+  .toc-card.plain::before { border-color:transparent; background:var(--line); }
+  .toc-btn { padding-left:14px; padding-right:14px; }
+  /* narrow: the menu is a sheet above the dock, opened by the dock's button */
+  body.toc-open .toc { display:block; left:12px; right:12px; max-height:55vh; box-shadow:0 12px 36px rgba(0,0,0,.4); }
+  /* wide: the menu is a rail left of the deck; the deck and the dock move over just enough to make room */
+  @media (min-width:1240px) {
+    body { --shift:max(0px, 740px - 50vw); }
+    .wrap { position:relative; left:var(--shift); }
+    .submitbar { left:calc(50% + var(--shift)); }
+    .toc, body.toc-open .toc { display:block; left:calc(50% - 726px + var(--shift)); right:auto; top:28px; bottom:120px;
+      width:216px; max-height:none; box-shadow:none; background:none; border-color:transparent; }
+    .toc-btn { display:none; }
+  }
+  @media (max-width:760px) {
+    .sec > h2 { min-height:44px; }
+    .sec-toggle { min-height:44px; white-space:normal; text-align:left; }
+    .sec-tail { display:none; }
+    .sec-help { width:44px; height:44px; }
+    .toc button { min-height:44px; }
+    .toc-btn { width:44px; padding:0; }
+  }
 </style>
 </head>
 <body>
@@ -679,6 +1032,8 @@
     <div class="goal-v md" id="goalText"></div>
   </div>
 
+  <div class="toprow" id="topRow"></div>
+
   <div id="diagramWrap" style="display:none">
     <h2>🗺️ The shape of it — architecture &amp; flow</h2>
     <div class="sechint">The whole plan at a glance. Scroll down for the detail — intents, decisions, and steps build on this.</div>
@@ -689,8 +1044,6 @@
     <div class="bar"><span id="progfill"></span></div>
     <div class="prog-row">
       <div class="txt" id="progtxt"></div>
-      <button type="button" class="left-toggle" id="leftToggle"
-        title="Hide cards you've already answered so you only see what's left">Show what's left</button>
     </div>
   </div>
 
@@ -701,7 +1054,7 @@
       <div class="ht-arrow">→</div>
       <div class="ht-step loop"><b>2 · Send to agent 🔁 — the loop, when you need it</b>Your questions get answered on the cards, redirects reshape the plan — intents, decisions and the implementation steps all update — and the deck reopens with your answers kept. One round is often enough; loop only while something's still unclear.</div>
       <div class="ht-arrow">→</div>
-      <div class="ht-step stop"><b>3 · Finalize 🏁 — hand it to the build loop</b>Unlocks when every required card is answered with no open questions. Finalizing locks the plan and starts the agent's <b>build → verify → fix</b> loop against the ✅ finish line at the bottom — it runs every check and loops until they all pass. Green means done.</div>
+      <div class="ht-step stop"><b>3 · Finalize 🏁 — hand it to the build loop</b>Always available. If required cards are still open, it asks you first and hands them to the agent. Finalizing locks the plan and starts the agent's <b>build → verify → fix</b> loop against the ✅ finish line at the bottom — it runs every check and loops until they all pass. Green means done.</div>
     </div>
   </details>
 
@@ -746,6 +1099,7 @@
     </div>
   </div>
 
+  <div id="designSlot"></div>
   <div id="intentsWrap" style="display:none">
     <h2>🧭 User intent — what we're building, in your words</h2>
     <div class="sechint">One intent = one outcome you want + why + how we prove it's done. Not a feature list, not an implementation step. Edit until it says exactly what you mean.</div>
@@ -756,6 +1110,14 @@
     <h2>🔍 Discovered — what we found while exploring</h2>
     <div class="sechint">Findings from exploring the codebase that change or inform the plan. Informational — nothing to approve, just to know.</div>
     <div id="discovered"></div>
+  </div>
+
+  <div id="designWrap" style="display:none">
+    <h2>🎨 The design: use it, then lock it</h2>
+    <div class="sechint">A working prototype of the app. Each question shows its options as rows of screenshots, one per step. Click any screenshot to try that option live, full screen, like the real app; in full screen, Point at a spot pins a note to anything. Pick an option, or write how to mix them. Your picks and notes go to the agent with the round.</div>
+    <div id="designBody"></div>
+    <div id="variantDecisions"></div>
+    <div id="designAfter"></div>
   </div>
 
   <div id="mocksWrap" style="display:none">
@@ -842,12 +1204,18 @@
   </div>
 </div>
 
+<nav class="toc" id="toc" aria-label="Sections"></nav>
+
 <div class="submitbar" id="submitbar">
   <div class="inner">
     <div class="status" id="substatus"></div>
     <span class="live-dot" id="liveDot">live</span>
     <div class="savestate" id="savestate"></div>
     <button class="btn secondary theme-btn" id="themeBtn" type="button" title="Toggle light/dark">☀️</button>
+    <button class="btn secondary toc-btn" id="tocBtn" type="button" aria-label="Sections" aria-expanded="false"
+      title="What is in this deck">☰</button>
+    <button class="btn secondary left-toggle" id="leftToggle" type="button" aria-pressed="false"
+      title="Hide cards you've already answered so you only see what's left">Show what's left</button>
     <button class="btn secondary" id="expandAll" type="button">Expand all</button>
     <span id="bulkBtns"></span>
     <button class="btn" id="sendRound" type="button" disabled>Send to agent</button>
@@ -855,6 +1223,190 @@
   </div>
 </div>
 
+<script>
+  // ===== deck block: sections you can fold and the menu of what is in the deck =====
+  var createNav = (app2) => {
+    const { store: store2, el: el2 } = app2;
+    const KEY = store2.lsKey + ":sections2";
+    const toc = document.getElementById("toc"), tocBtn = document.getElementById("tocBtn");
+    // the reference sections start folded: what needs you stays open
+    let closed = ["diagramWrap", "discoveredWrap", "stepsWrap", "finalVerifyWrap", "nextRoundWrap"];
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (Array.isArray(saved)) closed = saved;
+    } catch (err) {
+      /* no storage: the defaults */
+    }
+    const save = () => {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(secs.filter((s) => s.wrap.classList.contains("sec-closed")).map((s) => s.wrap.id)));
+      } catch (err) {
+        /* no storage: the fold lasts until the reload */
+      }
+    };
+    const setOpen = (s, open) => {
+      s.wrap.classList.toggle("sec-closed", !open);
+      s.toggle.setAttribute("aria-expanded", String(open));
+    };
+    const secs = [...document.querySelectorAll('#wrap [id$="Wrap"]')].filter((w) => w.querySelector(":scope > h2")).map((wrap) => {
+      const h = wrap.querySelector(":scope > h2");
+      // "🧭 User intent — what we're building" or "🎨 The design: use it": the sign, the name, the rest
+      const m = h.textContent.trim().match(/^(\S+)\s+(.*?)(?:(?:\s+—\s+|:\s+)(.*))?$/);
+      const icon = m ? m[1] : "", name = m ? m[2] : h.textContent.trim(), tail = m && m[3] || "";
+      const toggle = el2("button", "sec-toggle");
+      toggle.type = "button";
+      toggle.append(el2("span", "sec-chev", "▶"), document.createTextNode(`${icon} ${name}`.trim()));
+      const count = el2("span", "sec-count");
+      h.replaceChildren(toggle, ...(tail ? [el2("span", "sec-tail", tail)] : []), count);
+      const s = { wrap, h, toggle, count, icon, name };
+      if (wrap.querySelector(":scope > .sechint")) {
+        const help = el2("button", "sec-help", "?");
+        help.type = "button";
+        help.setAttribute("aria-label", `About ${name}`);
+        help.setAttribute("aria-pressed", "false");
+        help.addEventListener("click", (e) => {
+          e.stopPropagation();
+          help.setAttribute("aria-pressed", String(wrap.classList.toggle("sec-hints")));
+        });
+        h.appendChild(help);
+      }
+      wrap.classList.add("sec");
+      setOpen(s, !closed.includes(wrap.id));
+      h.addEventListener("click", () => {
+        setOpen(s, wrap.classList.contains("sec-closed"));
+        save();
+      });
+      return s;
+    });
+    const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const closeMenu = () => {
+      document.body.classList.remove("toc-open");
+      tocBtn.setAttribute("aria-expanded", "false");
+    };
+    const go = (s, cardEl) => {
+      if (s.wrap.classList.contains("sec-closed")) {
+        setOpen(s, true);
+        save();
+      }
+      if (cardEl) cardEl.classList.add("open");
+      // a card "Show what's left" hides: show all again so the jump lands
+      if (cardEl && cardEl.offsetParent === null && document.body.classList.contains("hide-done")) document.getElementById("leftToggle").click();
+      closeMenu();
+      (cardEl || s.h).scrollIntoView({ block: "start", behavior: calm() ? "auto" : "smooth" });
+    };
+    // the top of the page: one row of buttons, each opens its part
+    const topRow = document.getElementById("topRow");
+    const tops = [["summary", "Summary"], ["howtoD", "How it works"], ["redesignBar", "Interview me"]].map(([id, label]) => {
+      const target = document.getElementById(id);
+      const b = el2("button", null, label);
+      b.type = "button";
+      b.setAttribute("aria-expanded", "false");
+      b.addEventListener("click", () => {
+        const open = target.classList.toggle("top-open");
+        b.setAttribute("aria-expanded", String(open));
+        if (id === "howtoD") target.open = open;
+      });
+      target.classList.add("top-fold");
+      topRow.appendChild(b);
+      return { id, target, b };
+    });
+    let ivShown = false;
+    const syncTop = () => {
+      const plan = store2.plan || {};
+      // an interview under way comes into view once, also when it starts in a live update
+      const ivOn = Boolean(plan.interview && plan.interview.state && plan.interview.state !== "idle");
+      if (ivOn && !ivShown && !tops[2].target.classList.contains("top-open")) tops[2].b.click();
+      ivShown = ivOn;
+      // with no goal the summary is the only word on what this is: it stays
+      tops[0].target.classList.toggle("top-fold", Boolean(plan.goal));
+      tops[0].b.hidden = !plan.summary || !plan.goal;
+    };
+    let drawn = "", exp = null;
+    const sync = () => {
+      syncTop();
+      const rows = secs.filter((s) => getComputedStyle(s.wrap).display !== "none").map((s) => {
+        const cards = store2.cards.filter((c) => s.wrap.contains(c.el));
+        const asks = cards.filter((c) => c.kind !== "step" && c.kind !== "discovered");
+        const done = asks.filter((c) => store2.satisfied(c.id)).length;
+        const ct = asks.length ? `${done}/${asks.length}` : cards.length ? String(cards.length) : "";
+        const allDone = asks.length > 0 && done === asks.length;
+        s.count.textContent = asks.length ? `${done} of ${asks.length} answered` : cards.length ? String(cards.length) : "";
+        s.count.classList.toggle("done", allDone);
+        return { s, ct, allDone, cards: cards.map((c) => ({ c, title: (c.el.querySelector(".card-title .t") || c.el).textContent.trim(),
+          cls: !asks.includes(c) ? "plain" : store2.dismissed(c.id) ? "dismissed" : store2.satisfied(c.id) ? "answered" : store2.hasQuestion(c.id) ? "questioned" : "" })) };
+      });
+      const sig = JSON.stringify(rows.map((r) => [r.s.wrap.id, r.ct, r.cards.map((x) => [x.c.id, x.title, x.cls])]));
+      if (sig === drawn) return;
+      drawn = sig;
+      const ul = el2("ul");
+      rows.forEach(({ s, ct, allDone, cards }) => {
+        const li = el2("li");
+        li.dataset.sec = s.wrap.id;
+        const b = el2("button", "toc-sec" + (allDone ? " done" : ""));
+        b.type = "button";
+        b.append(el2("span", "nm", `${s.icon} ${s.name}`.trim()), el2("span", "ct", ct));
+        b.setAttribute("aria-expanded", String(exp === s.wrap.id));
+        b.addEventListener("click", () => {
+          exp = exp === s.wrap.id ? null : s.wrap.id;
+          toc.querySelectorAll("li[data-sec]").forEach((x) => {
+            x.classList.toggle("exp", x.dataset.sec === exp);
+            x.firstChild.setAttribute("aria-expanded", String(x.dataset.sec === exp));
+          });
+          if (exp) s.h.scrollIntoView({ block: "start", behavior: calm() ? "auto" : "smooth" });
+          if (exp && s.wrap.classList.contains("sec-closed")) {
+            setOpen(s, true);
+            save();
+          }
+          if (!cards.length) closeMenu();
+        });
+        if (exp === s.wrap.id) li.classList.add("exp");
+        li.appendChild(b);
+        if (cards.length) {
+          const ol = el2("ol");
+          cards.forEach(({ c, title, cls }) => {
+            const cb = el2("button", "toc-card " + cls);
+            cb.type = "button";
+            cb.title = title;
+            cb.appendChild(el2("span", "nm", title));
+            // the card as it is now: a redraw makes new card elements under the same ids
+            cb.addEventListener("click", () => go(s, (store2.cards.find((x) => x.id === c.id) || c).el));
+            ol.appendChild(el2("li")).appendChild(cb);
+          });
+          li.appendChild(ol);
+        }
+        ul.appendChild(li);
+      });
+      toc.replaceChildren(el2("div", "toc-h", "In this deck"), ul);
+      spy();
+    };
+    // the section you are reading is marked in the menu
+    const spy = () => {
+      let cur = null;
+      secs.forEach((s) => {
+        if (s.wrap.offsetParent !== null && s.h.getBoundingClientRect().top < 160) cur = s.wrap.id;
+      });
+      toc.querySelectorAll("li[data-sec]").forEach((li) => li.classList.toggle("cur", li.dataset.sec === cur));
+    };
+    let queued = false;
+    window.addEventListener("scroll", () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        spy();
+      });
+    }, { passive: true });
+    tocBtn.addEventListener("click", () => {
+      const open = document.body.classList.toggle("toc-open");
+      tocBtn.setAttribute("aria-expanded", String(open));
+      toc.style.bottom = open ? document.getElementById("submitbar").offsetHeight + 24 + "px" : "";
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && document.body.classList.contains("toc-open")) closeMenu();
+    });
+    return { sync };
+  };
+</script>
 <script>
   // ===== deck block: markdown + dom helpers =====
   // serve_plan.py rewrites the next line's value; the `let` declaration is its
@@ -989,7 +1541,9 @@
       cards: [],
       addBtns: [],
       // cards awaiting a live agent reply: cardId -> { len, text }.
-      pendingAsk: {}
+      pendingAsk: {},
+      // notes on the prototype (plan.design): this round's, and the ones sent in earlier rounds.
+      design: { notes: [], sent: [], reviews: {} }
     };
     store2.ans = (id) => store2.answers[id] = store2.answers[id] || {};
     store2.byId = (id) => findCard(store2, id);
@@ -1002,7 +1556,8 @@
       answers: store2.answers,
       agentActions: store2.agentActions,
       added: store2.added,
-      fvState: store2.fvState
+      fvState: store2.fvState,
+      design: store2.design
     });
     return store2;
   };
@@ -1021,6 +1576,12 @@
     if (src.added) store2.added = { ...EMPTY_ADDED(), ...src.added };
     const stale = (src.round || 1) < store2.round;
     if (src.fvState && !stale) store2.fvState = src.fvState;
+    if (src.design) {
+      const d = src.design;
+      // notes went to the agent with the round they were written in: a new round keeps them as "sent"
+      store2.design = stale ? { notes: [], sent: [...(d.sent || []), ...(d.notes || []).map((n) => ({ round: src.round || 1, ...n }))], reviews: d.reviews || {} }
+        : { notes: d.notes || [], sent: d.sent || [], reviews: d.reviews || {} };
+    }
     if (stale) {
       Object.values(store2.answers).forEach((a) => {
         delete a.question;
@@ -1063,6 +1624,887 @@
   var titleOf = (d) => d.title || d.id;
 </script>
 <script>
+  // ===== deck block: design (the clickable prototype: questions with options as rows of step screenshots, full screen, notes) =====
+  // plan.design = {state: "shaping" | "locked", prototype: "proto/index.html", start: "#/", width, height,
+  //   journeys: [{id, title, summary, variant: {fork: key}, steps: [{title, route, do}]}], replies: {noteId: text}}.
+  // The prototype is one working mock app (files under the plan's files/ folder, served sandboxed); its
+  // routes are hashes ("#/company/northwind?scenario=linked") and serve_plan.py makes it report each one.
+  // A fork is a decision with `variant: "<fork>"` and options [{key, label, caption}]: the prototype shows
+  // option KEY when loaded with ?v=<fork>:KEY, so the user tries each option in place and picks one.
+  // Notes: store.design.notes [{id, route, title, device, variants, x?, y?, text}] go back with the round
+  // as designNotes; a new round moves them to store.design.sent, shown with the agent's reply.
+  var isVariantDecision = (d) => Boolean(d && d.variant && (d.options || []).some((o) => o && typeof o === "object" && o.key));
+  var protoFile = (f) => String(f || "").replace(/^\/+/, "").replace(/^files\//, "");
+  var routePath = (r) => (String(r || "").split("?")[0] || "#/");
+  // a step is a screen file (a mock under files/) or a route in the prototype; both travel as `route`
+  var isFile = (r) => Boolean(r) && !String(r).startsWith("#");
+  var normSteps = (steps) => (steps || []).map((st) => st && st.screen && !st.route ? { ...st, route: protoFile(st.screen) } : st);
+  var createDesign = (app2) => {
+    const { store: store2, el: el2 } = app2;
+    const D = () => store2.plan.design || null;
+    const size = () => ({ w: (D() || {}).width || 1280, h: (D() || {}).height || 800 });
+    const forks = () => (store2.plan.decisions || []).filter(isVariantDecision);
+    const optsOf = (d) => (d.options || []).filter((o) => o && typeof o === "object" && o.key).map((o) => ({ ...o, steps: normSteps(o.steps) }));
+    const journeys = () => ((D() || {}).journeys || []).map((j) => ({ ...j, steps: normSteps(j.steps) }));
+    // the option being tried in the open prototype, per fork: starts at the picked one, else the first
+    const trying = {};
+    const pickedKey = (d) => {
+      const c = (store2.answers[d.id] || {}).choice;
+      const o = optsOf(d).find((x) => x.label === c);
+      return o ? o.key : null;
+    };
+    const tryKey = (d) => trying[d.variant] || pickedKey(d) || optsOf(d)[0].key;
+    const variantsNow = () => Object.fromEntries(forks().map((d) => [d.variant, tryKey(d)]));
+    let loads = 0;
+    const src = (route, over, fresh) => {
+      if (isFile(route)) {  // a mock screen: the file itself
+        const path = routePath(route).split("/").map(encodeURIComponent).join("/");
+        return "files/" + path + "?rev=" + (store2.plan.rev || 0) + (fresh ? "&n=" + ++loads : "");
+      }
+      const v = { ...variantsNow(), ...(over || {}) };
+      const q = Object.entries(v).map(([k, key]) => "v=" + encodeURIComponent(k + ":" + key));
+      q.push("rev=" + (store2.plan.rev || 0));
+      // a new load each time (not just a new #route): scenarios and fork options apply on load, Reset starts fresh
+      if (fresh) q.push("n=" + ++loads);
+      const file = protoFile(D().prototype).split("/").map(encodeURIComponent).join("/");
+      return "files/" + file + "?" + q.join("&") + (route || D().start || "#/");
+    };
+    const notes = () => store2.design.notes;
+    const notesOn = (route) => notes().filter((n) => n.route === routePath(route));
+    // the notes on a screen as one set of fork options shows it: a note stays with the option it was written on
+    const notesFor = (route, shown) => notesOn(route).filter((n) =>
+      Object.entries(n.variants || {}).every(([fork, key]) => !(fork in shown) || shown[fork] === key));
+    const touchDesign = () => {
+      app2.touched();
+      sync();
+    };
+
+    // --- shared pieces ------------------------------------------------------------------------
+    const pinEl = (n, num, pending) => {
+      const p = el2("div", "fl-pin" + (pending ? " pending" : ""), pending ? "" : String(num));
+      p.style.left = n.x * 100 + "%";
+      p.style.top = n.y * 100 + "%";
+      return p;
+    };
+    const drawPins = (box, list, device) => {
+      box.querySelectorAll(":scope > .fl-pin").forEach((p) => p.remove());
+      list.forEach((n, i) => {
+        if (n.x != null && (n.device || "desktop") === device) box.appendChild(pinEl(n, i + 1));
+      });
+    };
+    const frame = (route, over, title) => {
+      const { w, h } = size();
+      const box = el2("div", "fl-thumb");
+      box.style.setProperty("--w", w);
+      box.style.setProperty("--h", h);
+      box.dataset.route = routePath(route);
+      box.dataset.shown = JSON.stringify({ ...variantsNow(), ...(over || {}) });
+      const fr = document.createElement("iframe");
+      fr.setAttribute("sandbox", "allow-scripts allow-forms");
+      fr.setAttribute("loading", "lazy");
+      fr.setAttribute("tabindex", "-1");
+      fr.setAttribute("aria-hidden", "true");
+      fr.title = title || "Screen";
+      fr.width = w;
+      fr.height = h;
+      fr.src = src(route, over);
+      box.appendChild(fr);
+      drawPins(box, notesFor(route, JSON.parse(box.dataset.shown)), "desktop");
+      return box;
+    };
+    const redrawFramePins = (root) => root.querySelectorAll(".fl-thumb[data-shown]").forEach((b) =>
+      drawPins(b, notesFor(b.dataset.route, JSON.parse(b.dataset.shown)), "desktop"));
+    const arrow = (label) => {
+      const a = el2("div", "fl-arrow");
+      a.appendChild(el2("div", "fl-arrow-line"));
+      if (label) a.appendChild(el2("div", "fl-arrow-label", label));
+      return a;
+    };
+    // a step's screenshot, taken by check_prototype.py into files/shots/; until it exists, the screen live
+    const stemOf = (x) => String(x).replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "x";
+    // the screenshots that exist, asked from the server on every render (so a new run of the checker shows)
+    let shotNames = null;
+    let shotWait = [];
+    const fillShot = (box) => {
+      const { stem, n, route, over, title } = box._shot;
+      const name = `${stem}-${n}.jpg`;
+      if (!shotNames.has(name)) {
+        // no screenshot yet: the screen live in the same box (it may not be in the page yet, so fill it, don't replace it)
+        box.replaceChildren(...frame(route, over, title).childNodes);
+        return;
+      }
+      const img = document.createElement("img");
+      img.alt = title || "Screen";
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.src = `files/shots/${name}?rev=${store2.plan.rev || 0}`;
+      box.prepend(img);
+    };
+    const refreshShots = () => {
+      shotNames = null;
+      fetch("/shots").then((r) => (r.ok ? r.json() : [])).catch(() => []).then((list) => {
+        shotNames = new Set(Array.isArray(list) ? list : []);
+        const wait = shotWait;
+        shotWait = [];
+        wait.forEach(fillShot);
+      });
+    };
+    const shotBox = (stem, n, route, over, title) => {
+      const { w, h } = size();
+      const box = el2("div", "fl-thumb fl-shot");
+      box.style.setProperty("--w", w);
+      box.style.setProperty("--h", h);
+      box.dataset.route = routePath(route);
+      box.dataset.shown = JSON.stringify({ ...variantsNow(), ...(over || {}) });
+      box._shot = { stem, n, route, over, title };
+      drawPins(box, notesFor(route, JSON.parse(box.dataset.shown)), "desktop");
+      if (shotNames) fillShot(box);
+      else shotWait.push(box);
+      return box;
+    };
+    // one step's screenshot under its name; a click opens the flow live, full screen, at that step
+    const stepCell = (label, stem, st, si, over, open) => {
+      const cell = el2("div", "fl-screen");
+      cell.style.setProperty("--w", size().w);
+      cell.appendChild(el2("div", "fl-sname", `${si + 1}. ${st.title || st.route}`));
+      const go = el2("button", "fl-screen-btn");
+      go.type = "button";
+      go.title = "Try it live from this step";
+      go.setAttribute("aria-label", `Try ${label}, step ${si + 1}: ${st.title || st.route}`);
+      go.appendChild(shotBox(stem, si + 1, st.route, over, st.title));
+      go.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        open();
+      });
+      cell.appendChild(go);
+      return cell;
+    };
+    // one flow as a row: what it is, Try it (and Pick, for an option), then its steps as screenshots;
+    // a click on a screenshot opens that flow live, full screen, at that step
+    const REVIEWS = [["ok", "✓ Looks right"], ["skip", "Not now"]];
+    const flowRow = ({ label, caption, stem, steps, over, journey, tryRoute, pickD, pickLabel, choiceEls, reviewId }) => {
+      const row = el2("div", "fl-row");
+      const head = el2("div", "fl-rowhead");
+      head.appendChild(el2("div", "fl-name", label));
+      if (caption) head.appendChild(el2("div", "fl-cap", caption));
+      const acts = el2("div", "fl-acts");
+      const play = el2("button", "opt ghost", "▶ Try it");
+      play.type = "button";
+      play.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        openUse(journey ? { journey, si: 0 } : { route: tryRoute, over });
+      });
+      acts.appendChild(play);
+      if (pickD) {
+        const pb = el2("button", "opt fl-pick");
+        pb.type = "button";
+        pb.appendChild(el2("span", "fl-pick-off", "Pick"));
+        pb.appendChild(el2("span", "fl-pick-on", "✓ Picked"));
+        pb.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          pick(pickD, pickLabel);
+        });
+        acts.appendChild(pb);
+        choiceEls.push({ el: row, val: pickLabel });
+      }
+      // a walk-through is reviewed, not picked: it looks right (it gets built and checked) or not now (out of scope)
+      const reviewBtns = reviewId ? REVIEWS.map(([key, text]) => {
+        const b = el2("button", "opt fl-review r-" + key, text);
+        b.type = "button";
+        b.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          const r = store2.design.reviews;
+          if (r[reviewId] === key) delete r[reviewId];
+          else r[reviewId] = key;
+          touchDesign();
+        });
+        acts.appendChild(b);
+        return [key, b];
+      }) : [];
+      head.appendChild(acts);
+      const count = el2("div", "fl-count");
+      head.appendChild(count);
+      row.appendChild(head);
+      if (steps.length) {
+        const strip = el2("div", "fl-strip");
+        steps.forEach((st, si) => {
+          if (si) strip.appendChild(arrow(steps[si - 1].do));
+          strip.appendChild(stepCell(label, stem, st, si, over, () => openUse({ journey, si })));
+        });
+        row.appendChild(strip);
+      }
+      row._sync = () => {
+        const shown = { ...variantsNow(), ...(over || {}) };
+        const n = new Set(steps.flatMap((st) => notesFor(st.route, shown).map((x) => x.id))).size;
+        count.textContent = n ? `${n} note${n > 1 ? "s" : ""}` : "";
+        const rv = reviewId ? store2.design.reviews[reviewId] : null;
+        reviewBtns.forEach(([key, b]) => {
+          b.classList.toggle("sel", rv === key);
+          b.setAttribute("aria-pressed", String(rv === key));
+        });
+        row.dataset.review = rv || "";
+      };
+      row._sync();
+      return row;
+    };
+    const optionFlow = (d, o) => {
+      const over = { [d.variant]: o.key };
+      const steps = o.steps || [];
+      const stem = `${stemOf(d.variant)}-${stemOf(o.key)}`;
+      return { label: o.label, caption: o.caption, stem, steps, over, tryRoute: d.route || (D() || {}).start || "#/",
+        journey: steps.length ? { id: stem, title: o.label, variant: over, steps } : null };
+    };
+
+    // --- the section in the deck ------------------------------------------------------------------
+    let section = null;
+    const renderSection = (wrap, after) => {
+      const d = D();
+      if (d) refreshShots();
+      wrap.replaceChildren();
+      after.replaceChildren();
+      section = null;
+      if (!d) return;
+      const top = el2("div", "ds-top");
+      if (d.prototype) {
+        const use = el2("button", "btn", "▶ Use the whole prototype");
+        use.type = "button";
+        use.addEventListener("click", () => openUse({ route: d.start || "#/" }));
+        top.appendChild(use);
+      }
+      top.appendChild(el2("span", "ds-state", d.state === "locked"
+        ? "Design locked: the plan below is built from it. Notes still reach the agent."
+        : d.state === "shaping"
+          ? "Compare the options below, click any screenshot to try it live, pick one or say how to mix them. Lock the design when it is right."
+          : "Compare the options: click any screen to see it full size and leave notes on it, then pick one. The plan below is written for the recommended option and follows your pick. A picked screen is settled: everything on it gets built."));
+      wrap.appendChild(top);
+      const list = el2("div", "fl-rows ds-tours");
+      if (journeys().length) {
+        after.appendChild(el2("h3", "ds-h", "Also in this design"));
+        after.appendChild(el2("div", "sechint", "Not choices: walk-throughs of the rest of what this design touches. Try each one; mark it Looks right (it gets built and checked) or Not now (left out of this build), or leave a 💬 note on what should change."));
+        journeys().forEach((j) => {
+          const stem = `tour-${stemOf(j.id || j.title)}`;
+          const steps = j.steps || [];
+          list.appendChild(flowRow({ label: j.title || "Walk-through", caption: j.summary, stem, steps, over: j.variant || {},
+            journey: steps.length ? j : null, tryRoute: d.start || "#/", choiceEls: [], reviewId: j.id || j.title }));
+        });
+        after.appendChild(list);
+      }
+      const box = el2("div", "ds-notes");
+      after.appendChild(box);
+      section = { list, box };
+      drawNoteList();
+    };
+    const whereOf = (n) => `${n.title || n.route}${n.element ? `, on the ${n.element}` : n.x != null ? ", pinned" : ""}, ${n.device || "desktop"}`;
+    // the notes a kit screen draws itself, on their elements (numbered as in the lists), plus a pending new pin
+    const kitNotes = (list, pending) => [...list.map((n, i) => ({ id: n.id, num: i + 1, text: n.text, selector: n.selector || null,
+      ex: n.ex, ey: n.ey, x: n.x, y: n.y })), ...(pending ? [{ id: "pending", pending: true, ...pending }] : [])];
+    const post = (frame, msg) => {
+      try {
+        frame.contentWindow.postMessage(msg, "*");
+      } catch (err) {
+        /* the frame is loading: it asks again when ready */
+      }
+    };
+    const drawNoteList = () => {
+      if (!section) return;
+      const { box } = section;
+      box.replaceChildren();
+      const cur = notes(), sent = store2.design.sent || [];
+      if (!cur.length && !sent.length) {
+        box.appendChild(el2("div", "lbl", "Your notes"));
+        box.appendChild(el2("div", "fv-empty", "No notes yet. Open the prototype and use Point at a spot, or write a note on any screen."));
+        return;
+      }
+      if (cur.length) {
+        box.appendChild(el2("div", "lbl", `Your notes this round (${cur.length})`));
+        const ol = el2("ol");
+        cur.forEach((n) => {
+          const li = el2("li");
+          const tx = el2("span", "tx", n.text);
+          tx.prepend(el2("span", "where", whereOf(n)));
+          li.appendChild(tx);
+          const show = el2("button", null, "Show");
+          show.type = "button";
+          show.addEventListener("click", () => openUse({ route: n.routeFull || n.route, over: n.variants }));
+          const del = el2("button", null, "Delete");
+          del.type = "button";
+          del.addEventListener("click", () => {
+            store2.design.notes = notes().filter((m) => m.id !== n.id);
+            touchDesign();
+          });
+          li.append(show, del);
+          ol.appendChild(li);
+        });
+        box.appendChild(ol);
+      }
+      if (sent.length) {
+        const replies = (D() || {}).replies || {};
+        const lbl = el2("div", "lbl", `Notes you sent earlier (${sent.length})`);
+        lbl.style.marginTop = cur.length ? "14px" : "0";
+        box.appendChild(lbl);
+        const ol = el2("ol");
+        sent.forEach((n) => {
+          const li = el2("li");
+          const tx = el2("span", "tx", n.text);
+          tx.prepend(el2("span", "where", `round ${n.round || "?"}: ${whereOf(n)}`));
+          const r = replies[n.id];
+          tx.appendChild(el2("span", "reply" + (r ? "" : " wait"), r ? `Agent: ${r}` : "No reply from the agent yet."));
+          li.appendChild(tx);
+          ol.appendChild(li);
+        });
+        box.appendChild(ol);
+      }
+    };
+
+    // a fork card: its options as rows, each with Try it (in the prototype) and Pick
+    const renderFork = (d, body, choiceEls) => {
+      const blk = el2("div", "blk");
+      const n = optsOf(d).length;
+      blk.appendChild(el2("div", "lbl", `${n} options: compare the steps, click any screenshot to try it live, then pick one`));
+      const rows = el2("div", "fl-rows");
+      optsOf(d).forEach((o) => rows.appendChild(flowRow({ ...optionFlow(d, o), pickD: d, pickLabel: o.label, choiceEls })));
+      blk.appendChild(rows);
+      body.prepend(blk);
+    };
+    const pick = (d, label) => {
+      const a = store2.ans(d.id);
+      a.choice = a.choice === label ? null : label;
+      if (a.choice) {
+        trying[d.variant] = optsOf(d).find((o) => o.label === label).key;
+        const cardEl = document.querySelector(`.card[data-id="${CSS.escape(d.id)}"]`);
+        if (cardEl) cardEl.classList.remove("open");  // answered: it folds away, the head says what was picked
+      }
+      touchDesign();
+      if (window.__pickNow) window.__pickNow(d.id, a.choice);
+    };
+
+    const mkBtn = (txt, aria, cls) => {
+      const b = el2("button", cls || "fc-btn", txt);
+      b.type = "button";
+      if (aria) b.setAttribute("aria-label", aria);
+      return b;
+    };
+    const lock = () => document.body.classList.toggle("fl-lock", Boolean(viewer && !viewer.root.hidden));
+
+    // --- full screen: the prototype live, options to switch; notes are bubbles right on the screen -------
+    // 💬 Comment (or C) turns comment mode on: the element under the pointer lights up, a click opens a note
+    // bubble right there (type, Enter); the pin stays on that element; a click on a pin opens its bubble.
+    let viewer = null;
+    const viewerShell = () => {
+      if (viewer) return viewer;
+      const root = el2("div", "fv no-side");
+      root.hidden = true;
+      root.setAttribute("role", "dialog");
+      root.setAttribute("aria-modal", "true");
+      root.setAttribute("aria-label", "Use the prototype");
+      const bar = el2("div", "fc-bar");
+      const back = mkBtn("✕ Close", "Close the prototype");
+      const title = el2("div", "fc-title");
+      title.setAttribute("aria-live", "polite");
+      const tools = el2("div", "fc-tools");
+      const vars = el2("div", "fv-vars");
+      const dDesk = mkBtn("Desktop"), dPhone = mkBtn("Phone");
+      const prev = mkBtn("‹", "Previous step"), next = mkBtn("›", "Next step");
+      const reset = mkBtn("↺ Reset", "Reset the prototype's data");
+      const commentBtn = mkBtn("💬 Comment");
+      const guideBtn = mkBtn("🧭 Guide");
+      guideBtn.setAttribute("aria-pressed", "true");
+      commentBtn.setAttribute("aria-pressed", "false");
+      const notesBtn = mkBtn("📝 Notes");
+      const steps = el2("div", "fc-tools");
+      prev.title = "Previous step";
+      next.title = "Next step";
+      steps.append(prev, next);
+      tools.append(vars, dDesk, dPhone, reset, guideBtn, commentBtn, notesBtn);
+      bar.append(back, title, steps, tools);
+      const main = el2("div", "fv-main");
+      const stage = el2("div", "fv-stage");
+      const device = el2("div", "fv-device");
+      const fr = document.createElement("iframe");
+      fr.setAttribute("sandbox", "allow-scripts allow-forms");
+      fr.title = "The prototype";
+      const pins = el2("div", "fv-pins");
+      const catcher = el2("div", "fv-catch");
+      catcher.hidden = true;
+      device.append(fr, pins, catcher);
+      const tip = el2("div", "fv-tip", "Comment: click anything to leave a note right there. Esc or 💬 to stop.");
+      tip.hidden = true;
+      stage.append(device, tip);
+      const side = el2("aside", "fv-side");
+      const stepsH = el2("div", "fv-h", "Steps");
+      const stepList = el2("div", "fv-steps");
+      const notesH = el2("div", "fv-h", "Notes on this screen");
+      const list = el2("ol", "fv-notes");
+      side.append(stepsH, stepList, notesH, list);
+      main.append(stage, side);
+      root.append(bar, main);
+      document.body.appendChild(root);
+      viewer = { root, back, title, vars, frame: fr, device, pins, catcher, stage, tip, stepsH, stepList, list, dDesk, dPhone, prev, next, reset,
+        commentBtn, guideBtn, guiding: true, notesBtn, journey: null, si: 0, at: "#/", over: null, dev: "desktop", pending: null, commenting: false,
+        bubble: null };
+      back.addEventListener("click", closeUse);
+      dDesk.addEventListener("click", () => setDevice("desktop"));
+      dPhone.addEventListener("click", () => setDevice("phone"));
+      prev.addEventListener("click", () => step(viewer.si - 1));
+      next.addEventListener("click", () => step(viewer.si + 1));
+      reset.addEventListener("click", () => load(viewer.journey ? viewer.journey.steps[viewer.si].route : viewer.at));
+      commentBtn.addEventListener("click", () => setCommenting(!viewer.commenting));
+      guideBtn.addEventListener("click", () => {
+        viewer.guiding = !viewer.guiding;
+        sendGuide();
+      });
+      notesBtn.addEventListener("click", () => {
+        root.classList.toggle("no-side");
+        size2();
+      });
+      // a screen without the kit: the overlay takes the click instead
+      catcher.addEventListener("click", (e) => {
+        const r = catcher.getBoundingClientRect();
+        openBubble({ x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height }, null);
+      });
+      window.addEventListener("resize", () => viewer && !viewer.root.hidden && size2());
+      return viewer;
+    };
+    // the walk-through guide: on each step of a flow, the prototype rings what to click and says what to do
+    const sendGuide = () => {
+      if (!viewer) return;
+      viewer.guideBtn.classList.toggle("sel", viewer.guiding && Boolean(viewer.journey));
+      viewer.guideBtn.setAttribute("aria-pressed", String(viewer.guiding));
+      viewer.guideBtn.hidden = !viewer.journey;
+      if (!viewer.kit) return;
+      const j = viewer.journey, st = j && j.steps[viewer.si];
+      if (!st || !viewer.guiding || viewer.commenting) {
+        post(viewer.frame, { planHtmlGuide: null });
+        return;
+      }
+      const n = j.steps.length, last = viewer.si === n - 1;
+      const label = last ? `Step ${n} of ${n}: ${st.title || ""}. That is the end of this flow.`
+        : `Step ${viewer.si + 1} of ${n}: ${st.do || "look at this screen, then press ›"}`;
+      const target = st.click || st.target || "";  // the control that opens the next screen (a mock step's `click`)
+      post(viewer.frame, { planHtmlGuide: last ? { label, text: "", target } : { label, text: st.do || "", target, next: true } });
+    };
+    const setCommenting = (on) => {
+      viewer.commenting = on;
+      viewer.commentBtn.classList.toggle("sel", on);
+      viewer.commentBtn.setAttribute("aria-pressed", String(on));
+      viewer.tip.hidden = !on;
+      if (viewer.kit) post(viewer.frame, { planHtmlComment: on });
+      else viewer.catcher.hidden = !on;
+      if (!on) closeBubble();
+      sendGuide();
+    };
+    const size2 = () => {
+      const phone = viewer.dev === "phone";
+      const w = phone ? 390 : size().w, h = phone ? 844 : size().h;
+      const st = viewer.stage.getBoundingClientRect();
+      const k = Math.min(1, (st.width - 32) / w, (st.height - 32) / h);
+      viewer.frame.width = w;
+      viewer.frame.height = h;
+      viewer.frame.style.transform = `scale(${k})`;
+      viewer.k = k;
+      viewer.device.style.width = Math.round(w * k) + "px";
+      viewer.device.style.height = Math.round(h * k) + "px";
+      if (viewer.kit) post(viewer.frame, { planHtmlScale: k });
+      closeBubble();
+    };
+    // every flow the deck knows: the options of every question, then the walk-throughs
+    const allFlows = () => [...forks().flatMap((d) => optsOf(d).map((o) => optionFlow(d, o).journey).filter(Boolean)),
+      ...journeys()];
+    const parseRoute = (r) => {
+      const [path, qs] = String(r || "#/").split("?");
+      return { path: path || "#/", q: new URLSearchParams(qs || "") };
+    };
+    const stepIndexOf = (hash) => {
+      const j = viewer.journey;
+      if (!j) return -1;
+      const cur = parseRoute(hash);
+      let best = -1, bestScore = -1;
+      j.steps.forEach((s, i) => {
+        const sp = parseRoute(s.route);
+        if (sp.path !== cur.path) return;
+        let score = 0;
+        for (const [k, v] of sp.q) {
+          if (k === "scenario") continue;
+          if (cur.q.get(k) !== v) return;
+          score++;
+        }
+        // a tie goes to the step you are on, then the nearest one ahead (several steps can share a page)
+        const ahead = i >= viewer.si ? i - viewer.si : j.steps.length + viewer.si - i;
+        const rank = score * 100 + 99 - ahead;
+        if (rank > bestScore) {
+          best = i;
+          bestScore = rank;
+        }
+      });
+      return best;
+    };
+    const screenTitle = () => {
+      const j = viewer.journey;
+      if (j && routePath(j.steps[viewer.si].route) === routePath(viewer.at)) return j.steps[viewer.si].title || viewer.at;
+      for (const jj of allFlows()) {
+        const s = (jj.steps || []).find((x) => routePath(x.route) === routePath(viewer.at));
+        if (s && s.title) return s.title;
+      }
+      return routePath(viewer.at);
+    };
+    const effective = () => ({ ...variantsNow(), ...(viewer.over || (viewer.journey && viewer.journey.variant) || {}) });
+    const notesHere = () => notesFor(viewer.at, effective()).filter((n) => (n.device || "desktop") === viewer.dev);
+    const drawPinsNow = () => {
+      const pending = viewer.bubble && !viewer.bubble.note ? viewer.bubble.at : null;
+      if (viewer.kit) {
+        viewer.pins.replaceChildren();
+        post(viewer.frame, { planHtmlScale: viewer.k || 1, planHtmlNotes: kitNotes(notesHere(), pending) });
+        return;
+      }
+      viewer.pins.replaceChildren();
+      notesHere().forEach((n, i) => {
+        if (n.x == null) return;
+        const p = el2("button", "fl-pin fv-pin", String(i + 1));
+        p.type = "button";
+        p.style.left = n.x * 100 + "%";
+        p.style.top = n.y * 100 + "%";
+        p.setAttribute("aria-label", `Note ${i + 1}: ${n.text}`);
+        p.addEventListener("click", () => openBubble({ x: n.x, y: n.y }, n));
+        viewer.pins.appendChild(p);
+      });
+      if (pending) viewer.pins.appendChild(pinEl(pending, 0, true));
+    };
+    // the bubble: a new note at a spot (on an element when the kit says which), or an existing one
+    const closeBubble = () => {
+      if (!viewer || !viewer.bubble) return;
+      viewer.bubble.el.remove();
+      viewer.bubble = null;
+      drawPinsNow();
+    };
+    const openBubble = (at, note) => {
+      closeBubble();
+      const b = el2("div", "fv-bubble");
+      b.setAttribute("role", "dialog");
+      b.setAttribute("aria-label", note ? "Note" : "New note");
+      const on = note ? note.element : at.element;
+      if (on) b.appendChild(el2("div", "fv-bubble-on", `On the ${on}`));
+      const ta = el2("textarea");
+      ta.setAttribute("aria-label", "Note text");
+      ta.placeholder = "What should change here?";
+      ta.value = note ? note.text : "";
+      const acts = el2("div", "fv-bubble-acts");
+      const save = mkBtn(note ? "Save" : "Add note", null, "opt");
+      const del = note ? mkBtn("Delete", null, "opt ghost") : null;
+      const cancel = mkBtn(note ? "Close" : "Cancel", null, "opt ghost");
+      acts.append(save, ...(del ? [del] : []), cancel);
+      b.append(ta, acts);
+      // next to the spot, kept inside the stage
+      const st = viewer.stage.getBoundingClientRect(), dv = viewer.device.getBoundingClientRect();
+      const px = dv.left - st.left + at.x * dv.width, py = dv.top - st.top + at.y * dv.height;
+      b.style.left = Math.max(8, Math.min(px + 14, st.width - 300)) + "px";
+      b.style.top = Math.max(8, Math.min(py - 12, st.height - 170)) + "px";
+      viewer.stage.appendChild(b);
+      viewer.bubble = { el: b, at, note };
+      drawPinsNow();
+      const commit = () => {
+        const text = ta.value.trim();
+        if (!text) {
+          ta.focus();
+          return;
+        }
+        if (note) note.text = text;
+        else {
+          const n = { id: "n" + Date.now().toString(36), route: routePath(viewer.at), routeFull: viewer.at, title: screenTitle(),
+            device: viewer.dev, variants: effective(), x: +at.x.toFixed(4), y: +at.y.toFixed(4), text };
+          if (viewer.journey) Object.assign(n, { journey: viewer.journey.id || viewer.journey.title, step: viewer.si + 1 });
+          if (at.selector) Object.assign(n, { selector: at.selector, element: at.element, ex: at.ex, ey: at.ey });
+          store2.design.notes = [...notes(), n];
+        }
+        viewer.bubble.el.remove();
+        viewer.bubble = null;
+        touchDesign();
+      };
+      save.addEventListener("click", commit);
+      if (del) del.addEventListener("click", () => {
+        store2.design.notes = notes().filter((m) => m.id !== note.id);
+        viewer.bubble.el.remove();
+        viewer.bubble = null;
+        touchDesign();
+      });
+      cancel.addEventListener("click", closeBubble);
+      ta.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          commit();
+        } else if (e.key === "Escape") {
+          e.stopPropagation();
+          closeBubble();
+        }
+      });
+      requestAnimationFrame(() => ta.focus());
+    };
+    const drawBar = () => {
+      const j = viewer.journey;
+      viewer.title.replaceChildren(document.createTextNode(j ? j.title : store2.plan.title || "The prototype"));
+      const sub = j ? `Step ${viewer.si + 1} of ${j.steps.length}: ${j.steps[viewer.si].title || ""}` + (j.steps[viewer.si].do ? `. Next: ${j.steps[viewer.si].do}` : "")
+        : screenTitle();
+      viewer.title.appendChild(el2("small", null, sub));
+      viewer.title.title = viewer.title.textContent;
+      viewer.prev.hidden = viewer.next.hidden = !j;
+      viewer.prev.disabled = !j || viewer.si === 0;
+      viewer.next.disabled = !j || viewer.si === j.steps.length - 1;
+      viewer.vars.replaceChildren();
+      viewer.reset.hidden = isFile(viewer.at);
+      (isFile(viewer.at) ? [] : forks()).forEach((d) => {
+        const g = el2("div", "fv-var");
+        g.setAttribute("role", "group");
+        g.setAttribute("aria-label", d.title || d.variant);
+        g.appendChild(el2("span", "nm", d.variantLabel || d.variant));
+        const now = effective()[d.variant], picked = pickedKey(d);
+        optsOf(d).forEach((o) => {
+          const b = el2("button", (o.key === now ? "on" : "") + (o.key === picked ? " picked" : ""), o.key);
+          b.type = "button";
+          b.title = `${o.label}${o.key === picked ? " (picked)" : ""}`;
+          b.setAttribute("aria-label", `${d.variantLabel || d.variant}: ${o.label}`);
+          b.setAttribute("aria-pressed", String(o.key === now));
+          b.addEventListener("click", () => {
+            trying[d.variant] = o.key;
+            viewer.over = { ...effective(), [d.variant]: o.key };
+            load(viewer.at);
+          });
+          g.appendChild(b);
+        });
+        viewer.vars.appendChild(g);
+      });
+      viewer.dDesk.classList.toggle("sel", viewer.dev === "desktop");
+      viewer.dPhone.classList.toggle("sel", viewer.dev === "phone");
+      const here = notesHere().length;
+      viewer.notesBtn.textContent = `📝 Notes${here ? ` (${here})` : ""}`;
+    };
+    const drawSide = () => {
+      const j = viewer.journey;
+      viewer.stepsH.hidden = viewer.stepList.hidden = !j;
+      viewer.stepList.replaceChildren();
+      if (j) {
+        j.steps.forEach((s, i) => {
+          const b = el2("button", i === viewer.si ? "on" : "");
+          b.type = "button";
+          b.appendChild(el2("span", "n", String(i + 1)));
+          b.appendChild(document.createTextNode(s.title || s.route));
+          b.addEventListener("click", () => step(i));
+          viewer.stepList.appendChild(b);
+        });
+      }
+      const list = notesHere();
+      viewer.list.replaceChildren();
+      if (!list.length) viewer.list.appendChild(el2("li", "fv-empty", "No notes on this screen yet. Press 💬 Comment and click anything."));
+      list.forEach((n, i) => {
+        const li = el2("li");
+        li.appendChild(el2("span", "n" + (n.x == null ? " whole" : ""), String(i + 1)));
+        const tx = el2("span", "tx", n.text);
+        if (n.element) tx.appendChild(el2("span", "meta", `on the ${n.element}`));
+        li.appendChild(tx);
+        const del = el2("button", null, "✕");
+        del.type = "button";
+        del.setAttribute("aria-label", "Delete note " + (i + 1));
+        del.addEventListener("click", () => {
+          store2.design.notes = notes().filter((m) => m.id !== n.id);
+          touchDesign();
+        });
+        li.appendChild(del);
+        viewer.list.appendChild(li);
+      });
+      if (!viewer.bubble) drawPinsNow();
+    };
+    const drawAll = () => {
+      drawBar();
+      drawSide();
+    };
+    // load a page into the frame in place of the one there: a screen must never add an entry to the browser's
+    // history, or Back walks the screens inside the frame while the step shown here stays where it was
+    const navFrame = (url) => {
+      try {
+        viewer.frame.contentWindow.location.replace(new URL(url, location.href).href);
+      } catch (err) {
+        viewer.frame.src = url;
+      }
+    };
+    const load = (route) => {
+      viewer.at = route || "#/";
+      closeBubble();
+      viewer.kit = false;
+      viewer.catcher.hidden = !viewer.commenting;
+      // Keep the painted screen until the replacement loads; discard superseded pending frames.
+      if (viewer.oldFrame) viewer.frame.remove();
+      else viewer.oldFrame = viewer.frame;
+      viewer.oldFrame.inert = true;
+      // a new frame that starts on its page: its first load adds no history entry, and no blank page loads first
+      // (a blank load would spend the listener below and drop the old screen too early)
+      const fr = viewer.oldFrame.cloneNode(false);
+      fr.src = src(viewer.at, viewer.over || (viewer.journey && viewer.journey.variant), true);
+      fr.inert = false;
+      fr.style.visibility = "hidden";
+      viewer.frame = fr;
+      viewer.device.setAttribute("aria-busy", "true");
+      fr.addEventListener("load", () => {
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          if (viewer.frame !== fr || viewer.root.hidden) return;
+          fr.style.visibility = "";
+          viewer.oldFrame?.remove();
+          viewer.oldFrame = null;
+          viewer.device.setAttribute("aria-busy", "false");
+        }));
+      }, { once: true });
+      viewer.device.prepend(fr);
+      drawAll();
+      size2();
+    };
+    const step = (i) => {
+      const j = viewer.journey;
+      if (!j || i < 0 || i >= j.steps.length) return;
+      viewer.si = i;
+      load(j.steps[i].route);
+    };
+    const setDevice = (dev) => {
+      viewer.dev = dev;
+      size2();
+      drawAll();
+    };
+    // messages from the prototype: the kit is there, the route changed, a click in comment mode, a pin
+    window.addEventListener("message", (e) => {
+      if (!viewer || viewer.root.hidden || e.source !== viewer.frame.contentWindow) return;
+      const m = e.data || {};
+      if (m.planHtmlKit) {
+        viewer.kit = true;
+        viewer.catcher.hidden = true;
+        post(viewer.frame, { planHtmlComment: viewer.commenting });
+        const st = viewer.journey && viewer.journey.steps[viewer.si];
+        if (st && st.focus && routePath(st.route) === routePath(viewer.at)) post(viewer.frame, { planHtmlFocus: st.focus });
+        drawPinsNow();
+        sendGuide();
+      } else if (m.planHtmlEscape) {
+        if (viewer.bubble) closeBubble();
+        else setCommenting(false);
+      } else if (m.planHtmlNewNote && viewer.commenting) {
+        openBubble(m.planHtmlNewNote, null);
+      } else if (m.planHtmlOpenNote) {
+        const n = notes().find((x) => x.id === m.planHtmlOpenNote);
+        if (n) openBubble({ x: m.px, y: m.py }, n);
+      } else if (m.planHtmlNext) {  // a mock screen: the user clicked the step's ringed control
+        if (viewer.journey && isFile(viewer.at) && !viewer.commenting) step(viewer.si + 1);
+      } else if (typeof m.planHtmlRoute === "string") {
+        if (isFile(viewer.at)) return;  // a mock screen: the step is the one opened, whatever its hash
+        viewer.at = m.planHtmlRoute || "#/";
+        const i = stepIndexOf(viewer.at);
+        if (i >= 0) viewer.si = i;
+        closeBubble();
+        drawAll();
+        setTimeout(sendGuide, 80);
+      }
+    });
+    const openUse = ({ route, journey, si, over }) => {
+      if (!D() || (viewer && viewer.closing)) return;  // mid-close: its history entry is on its way out
+      if (journey && !(journey.steps || []).length) journey = null; // nothing to walk: open where it starts
+      viewerShell();
+      viewer.journey = journey || null;
+      viewer.si = si || 0;
+      viewer.over = over || null;
+      viewer.dev = window.innerWidth <= 760 ? "phone" : "desktop";
+      viewer.guiding = true;
+      // one history entry for the open viewer, so the browser's Back closes it and stays in the deck
+      if (viewer.root.hidden && !(history.state && history.state.planHtmlViewer)) history.pushState({ planHtmlViewer: 1 }, "");
+      if (viewer.root.hidden) {
+        viewer.opener = document.activeElement;
+        viewer.scroll = window.scrollY;
+        viewer.background = [...document.body.children].filter((el) => el !== viewer.root && !el.inert);
+        viewer.background.forEach((el) => { el.inert = true; });
+      }
+      clearTimeout(viewer.closeTimer);
+      viewer.closing = false;
+      viewer.root.hidden = false;
+      void viewer.root.offsetWidth;
+      viewer.root.classList.add("open");
+      lock();
+      viewer.back.focus({ preventScroll: true });
+      load(journey ? journey.steps[viewer.si].route : route || D().start || "#/");
+    };
+    // "Show me" from an intent: play its flow, guided (an option's flow or a walk-through, by id)
+    const showMe = (id) => {
+      const j = allFlows().find((x) => (x.id || x.title) === id);
+      if (j) openUse({ journey: j, si: 0, over: j.variant });
+    };
+    // an intent's flow as screens to put next to its words: top to bottom, the click between them
+    const screens = (id) => {
+      const opt = forks().flatMap((d) => optsOf(d).map((o) => optionFlow(d, o))).find((f) => f.journey && f.journey.id === id);
+      const j = opt ? opt.journey : journeys().find((x) => (x.id || x.title) === id);
+      if (!j || !(j.steps || []).length) return null;
+      const stem = opt ? opt.stem : `tour-${stemOf(j.id || j.title)}`;
+      const over = j.variant || {};
+      const col = el2("div", "card-screens");
+      j.steps.forEach((st, si) => {
+        if (si) col.appendChild(el2("div", "fl-down", j.steps[si - 1].do || ""));
+        col.appendChild(stepCell(j.title || "Walk-through", stem, st, si, over, () => openUse({ journey: j, si, over })));
+      });
+      return col;
+    };
+    const closeUse = () => {
+      if (!viewer || viewer.root.hidden || viewer.closing) return;
+      viewer.closing = true;
+      closeBubble();
+      setCommenting(false);
+      viewer.root.classList.remove("open");
+      viewer.closeTimer = setTimeout(() => {
+        viewer.root.hidden = true;
+        viewer.oldFrame?.remove();
+        viewer.oldFrame = null;
+        navFrame("about:blank");
+        viewer.background.forEach((el) => { el.inert = false; });
+        lock();
+        sync();
+        window.scrollTo({ top: viewer.scroll, behavior: "instant" });
+        viewer.opener?.focus({ preventScroll: true });
+        viewer.closing = false;
+      }, matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 160);
+      // closed by its button or Esc: drop the viewer's own history entry (Back already did)
+      if (history.state && history.state.planHtmlViewer) history.back();
+    };
+    window.addEventListener("popstate", () => {
+      if (viewer && !viewer.root.hidden && !(history.state && history.state.planHtmlViewer)) closeUse();
+    });
+    const sync = () => {
+      const wrap = document.getElementById("designWrap");
+      if (wrap) {
+        wrap.querySelectorAll(".fl-row").forEach((r) => r._sync && r._sync());
+        redrawFramePins(wrap);
+      }
+      document.querySelectorAll(".card-screens").forEach(redrawFramePins);
+      if (section) drawNoteList();
+      if (viewer && !viewer.root.hidden) drawAll();
+    };
+    document.addEventListener("keydown", (e) => {
+      if (!viewer || viewer.root.hidden) return;
+      const typing = e.target && /^(TEXTAREA|INPUT)$/.test(e.target.tagName);
+      if (e.key === "Escape") {
+        if (viewer.bubble) closeBubble();
+        else if (viewer.commenting) setCommenting(false);
+        else closeUse();
+      } else if (!typing && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key === "c" || e.key === "C")) {
+        setCommenting(!viewer.commenting);
+      } else if (!typing && viewer.journey && e.key === "ArrowLeft") step(viewer.si - 1);
+      else if (!typing && viewer.journey && e.key === "ArrowRight") step(viewer.si + 1);
+    });
+    // the plan changed under the open full screen (a live rewrite): redraw from the new plan
+    const replan = () => {
+      if (viewer && !viewer.root.hidden) {
+        if (!D()) closeUse();
+        else {
+          if (viewer.journey) {
+            const fresh = allFlows().find((j) => (j.id || j.title) === (viewer.journey.id || viewer.journey.title));
+            viewer.journey = fresh && fresh.steps && fresh.steps[viewer.si] ? fresh : null;
+          }
+          drawAll();
+        }
+      }
+    };
+    return { renderSection, renderFork, openUse, replan, sync, showMe, screens, hasFlow: (id) => allFlows().some((x) => (x.id || x.title) === id) };
+  };
+</script>
+<script>
   // ===== deck block: cards (buildCard + authoring + grill + chat) =====
   // src/cards.js
   var chipClass = (s) => s === "needs-you" ? "you" : s === "agent-call" ? "agent" : "fyi";
@@ -1096,6 +2538,17 @@
     if (!d.summary) summaryLine.style.display = "none";
     titleWrap.appendChild(summaryLine);
     head.appendChild(titleWrap);
+    // a card about a flow (an intent with `journey`) plays it in the prototype, guided, in one click
+    if (d.journey && app2.design && app2.design.hasFlow(d.journey)) {
+      const showBtn = el2("button", "opt ghost show-me", "▶ Show me");
+      showBtn.type = "button";
+      showBtn.title = "Play this flow in the prototype, step by step";
+      showBtn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        app2.design.showMe(d.journey);
+      });
+      head.appendChild(showBtn);
+    }
     if (d.userAdded) head.appendChild(el2("span", "added-tag", "added by you"));
     const quick = el2("div", "quick");
     head.appendChild(quick);
@@ -1227,7 +2680,9 @@
     if (!d.userAdded && (kind === "intent" || kind === "boundary")) {
       const baseText = kind === "intent" ? d.intent : d.boundary;
       const blk = el2("div", "blk");
-      blk.appendChild(el2("div", "lbl", kind === "intent" ? "The intent" : "The boundary"));
+      const textLbl = el2("div", "lbl-row");
+      textLbl.appendChild(el2("div", "lbl", kind === "intent" ? "The intent" : "The boundary"));
+      blk.appendChild(textLbl);
       const textView = el2("div", "intent-view");
       const renderText = () => {
         const a = answers[d.id] || {};
@@ -1238,8 +2693,9 @@
       };
       renderText();
       blk.appendChild(textView);
-      const editBtn = el2("button", "opt ghost intent-edit-btn", `Edit this ${kind}`);
+      const editBtn = el2("button", "opt ghost intent-edit-btn", "✎ Edit");
       editBtn.type = "button";
+      editBtn.setAttribute("aria-label", `Edit this ${kind}`);
       const editTa = el2("textarea");
       editTa.style.display = "none";
       editTa.placeholder = `Rewrite the ${kind} in your words…`;
@@ -1260,7 +2716,7 @@
         renderText();
         touched();
       });
-      blk.appendChild(editBtn);
+      textLbl.appendChild(editBtn);
       blk.appendChild(editTa);
       body.appendChild(blk);
     }
@@ -1392,6 +2848,7 @@
       b.appendChild(dv);
       body.appendChild(b);
     }
+    let chatBlk = null, chatInput = null;
     if (kind !== "step") {
       const hasThread = d.thread && d.thread.length;
       const b = el2("div", "blk chat-blk");
@@ -1467,7 +2924,8 @@
       composer.appendChild(cta);
       composer.appendChild(sendQ);
       b.appendChild(composer);
-      body.appendChild(b);
+      chatBlk = b;
+      chatInput = cta;
     }
     const a0 = answers[d.id] || {};
     const optBlk = el2("div", "blk");
@@ -1475,11 +2933,18 @@
     const rawOpts = d.options || [];
     const mockOpts = rawOpts.filter((o) => o && typeof o === "object" && (o.svg || o.html));
     const plainOpts = rawOpts.filter((o) => typeof o === "string");
+    const variantOpts = isVariantDecision(d) ? rawOpts.filter((o) => o && typeof o === "object" && o.key) : [];
     const choiceEls = [];
+    let showOwn = () => {};
     const pickChoice = (val) => {
       const a = ans(d.id);
       a.choice = a.choice === val ? null : val;
+      if (a.choice === "reject") {  // "not quite" needs your words: the card stays open on the text box
+        card.classList.add("open");
+        showOwn(true);
+      } else if (a.choice) card.classList.remove("open");  // answered: it folds away, the head says what was picked
       touched();
+      if (window.__pickNow) window.__pickNow(d.id, a.choice);
     };
     let mocksGrid = null;
     const syncChoiceEls = () => {
@@ -1548,10 +3013,14 @@
       mocksBlk.appendChild(el2("div", "lbl", "The directions — click one to pick it"));
       mocksBlk.appendChild(grid);
       body.prepend(mocksBlk);
-      card.classList.add("open");
+      if (!satisfied(d.id)) card.classList.add("open");
+    }
+    if (variantOpts.length) {
+      app2.design.renderFork(d, body, choiceEls);
+      if (!satisfied(d.id)) card.classList.add("open");
     }
     const opts = el2("div", "opts");
-    const choices = kind === "discovered" ? [] : mockOpts.length || plainOpts.length ? plainOpts.map((o) => ({ kind: "custom", label: o })) : kind === "intent" ? [
+    const choices = kind === "discovered" ? [] : mockOpts.length || variantOpts.length || plainOpts.length ? plainOpts.map((o) => ({ kind: "custom", label: o })) : kind === "intent" ? [
       { kind: "approve", label: "This is what I want" },
       { kind: "reject", label: "Not quite — see my notes/edit" }
     ] : kind === "boundary" ? [
@@ -1564,7 +3033,7 @@
       { kind: "agent", label: "Your call, agent" }
     ];
     const valOf = (c) => c.kind === "custom" ? c.label : c.kind;
-    if (!mockOpts.length) {
+    if (!mockOpts.length && !variantOpts.length) {
       choices.forEach((c) => {
         const qb = el2("button", "qbtn", c.label);
         qb.type = "button";
@@ -1590,14 +3059,67 @@
     });
     if (choices.length) optBlk.appendChild(opts);
     const ta = el2("textarea");
-    ta.placeholder = "Or answer in your own words — free text counts as an answer. Add detail, redirect, or explain your pick…";
+    ta.placeholder = variantOpts.length ? "Or mix them, in your own words: start like A, check the match like B, end with A's Undo…"
+      : "Or answer in your own words — free text counts as an answer. Add detail, redirect, or explain your pick…";
     if (a0.answer) ta.value = a0.answer;
     ta.addEventListener("input", () => {
       ans(d.id).answer = ta.value;
       touched();
     });
     optBlk.appendChild(ta);
-    if (kind !== "step" && kind !== "discovered") body.appendChild(optBlk);
+    const hasDecision = kind !== "step" && kind !== "discovered";
+    if (hasDecision) body.appendChild(optBlk);
+    const tools = el2("div", "card-tools");
+    if (hasDecision && choices.length) {
+      const ownBtn = el2("button", null, "✎ Write your own");
+      ownBtn.type = "button";
+      showOwn = (focus) => {
+        ta.classList.remove("own-closed");
+        ownBtn.setAttribute("aria-expanded", "true");
+        if (focus) ta.focus();
+      };
+      const ownOpen = Boolean(a0.answer && a0.answer.trim()) || a0.choice === "reject";
+      ta.classList.toggle("own-closed", !ownOpen);
+      ownBtn.setAttribute("aria-expanded", String(ownOpen));
+      ownBtn.addEventListener("click", () => {
+        if (ta.classList.contains("own-closed")) showOwn(true);
+        else {
+          ta.classList.add("own-closed");
+          ownBtn.setAttribute("aria-expanded", "false");
+        }
+      });
+      tools.appendChild(ownBtn);
+    }
+    if (chatBlk) {
+      store2.chatOpen = store2.chatOpen || new Set();
+      const n = d.thread ? d.thread.length : 0;
+      const askBtn = el2("button", null, "💬 Ask the agent" + (n ? ` (${n})` : ""));
+      askBtn.type = "button";
+      const setChat = (open) => {
+        chatBlk.classList.toggle("chat-closed", !open);
+        askBtn.setAttribute("aria-expanded", String(open));
+        if (open) store2.chatOpen.add(d.id);
+        else store2.chatOpen.delete(d.id);
+      };
+      // an agent reply you have not acted on yet shows without a click, also after a reload
+      const unread = n > 0 && d.thread[n - 1].role === "agent" && !satisfied(d.id);
+      setChat(store2.chatOpen.has(d.id) || store2.pendingAsk[d.id] != null || unread);
+      askBtn.addEventListener("click", () => {
+        setChat(chatBlk.classList.contains("chat-closed"));
+        if (store2.chatOpen.has(d.id)) chatInput.focus();
+      });
+      tools.appendChild(askBtn);
+    }
+    if (tools.firstChild) body.appendChild(tools);
+    if (chatBlk) body.appendChild(chatBlk);
+    // an intent with screens: its words on the left, its flow's screens next to them
+    const screens = kind === "intent" && d.journey && app2.design ? app2.design.screens(d.journey) : null;
+    if (screens) {
+      const main = el2("div", "card-main");
+      main.append(...body.childNodes);
+      body.append(main, screens);
+      body.classList.add("with-screens");
+    }
     card.appendChild(body);
     container.appendChild(card);
     const grillOpen = () => {
@@ -1709,7 +3231,7 @@
       });
       container.appendChild(b);
     };
-    const DRAG_CONTAINERS = ["intents", "mockDecisions", "decisions", "steps"];
+    const DRAG_CONTAINERS = ["intents", "variantDecisions", "mockDecisions", "decisions", "steps"];
     let dragging = null;
     const applySavedOrder = (cid) => {
       const c = document.getElementById(cid);
@@ -1790,6 +3312,7 @@
       "boundaries",
       "intents",
       "discovered",
+      "variantDecisions",
       "mockDecisions",
       "decisions",
       "steps",
@@ -1828,7 +3351,8 @@
       document.getElementById("goalBox").classList.toggle("show", Boolean(PLAN2.goal));
       if (PLAN2.goal) document.getElementById("goalText").innerHTML = md2(PLAN2.goal);
       document.getElementById("followupBanner").classList.toggle("show", Boolean(PLAN2.followUp));
-      document.getElementById("finalize").textContent = PLAN2.followUp ? "Resume build ▶" : "Finalize plan";
+      const shaping = Boolean(PLAN2.design && PLAN2.design.state === "shaping" && !PLAN2.followUp);
+      document.getElementById("finalize").textContent = PLAN2.followUp ? "Resume build ▶" : shaping ? "Lock the design ▶" : "Finalize plan";
       const boundaries = [...PLAN2.boundaries || [], ...store2.added.boundaries];
       document.getElementById("boundariesWrap").style.display = PLAN2.hideEmpty && !boundaries.length ? "none" : "";
       boundaries.forEach((d, i) => buildCard(app2, d, i, "boundary", document.getElementById("boundaries")));
@@ -1847,11 +3371,19 @@
       document.getElementById("discoveredWrap").style.display = discovered.length ? "" : "none";
       discovered.forEach((d, i) => buildCard(app2, d, i, "discovered", document.getElementById("discovered")));
       const isMockDecision = (d) => (d.options || []).some((o) => o && typeof o === "object" && (o.svg || o.html));
-      const mockDecisions = (PLAN2.decisions || []).filter(isMockDecision);
+      const variantDecisions = (PLAN2.decisions || []).filter(isVariantDecision);
+      const mockDecisions = (PLAN2.decisions || []).filter((d) => !isVariantDecision(d) && isMockDecision(d));
       const plainDecisions = [
-        ...(PLAN2.decisions || []).filter((d) => !isMockDecision(d)),
+        ...(PLAN2.decisions || []).filter((d) => !isVariantDecision(d) && !isMockDecision(d)),
         ...store2.added.decisions
       ];
+      // the design (a clickable prototype) sits at the top of the deck: it is what everything else is built from
+      const designWrap = document.getElementById("designWrap");
+      const designSlot = document.getElementById("designSlot");
+      if (designWrap.parentElement !== designSlot) designSlot.appendChild(designWrap);
+      designWrap.style.display = PLAN2.design ? "" : "none";
+      app2.design.renderSection(document.getElementById("designBody"), document.getElementById("designAfter"));
+      variantDecisions.forEach((d, i) => buildCard(app2, d, i, "decision", document.getElementById("variantDecisions")));
       if (mockDecisions.length) {
         document.getElementById("mocksWrap").style.display = "";
         mockDecisions.forEach((d, i) => buildCard(app2, d, i, "decision", document.getElementById("mockDecisions")));
@@ -2103,6 +3635,14 @@
         }
         return base;
       }),
+      // notes on the prototype: which screen (route), where (x, y), which variants were showing, and the change wanted
+      designNotes: store2.design.notes.filter((n) => (n.text || "").trim()),
+      designNotesEarlier: store2.design.sent || [],
+      // each walk-through: ok = looks right (build and check it), skip = not now (out of this build)
+      designReviews: Object.entries(store2.design.reviews || {}).map(([journey, review]) => {
+        const j = ((store2.plan.design || {}).journeys || []).find((x) => (x.id || x.title) === journey);
+        return { journey, title: j ? j.title : journey, review };
+      }),
       // the user's edited finish-line rows (authoritative); empty rows dropped
       finalVerify: (store2.fvState || []).filter((v) => [v.intent, v.method, v.command, v.expected].some((x) => (x || "").trim()))
     };
@@ -2113,7 +3653,8 @@
   // src/live.js
   var createLive = (app2) => {
     const { store: store2, el: el2, mdEl: mdEl2 } = app2;
-    const needsYouCards = () => store2.cards.filter((c) => store2.plan.followUp ? c.data.status === "needs-you" : c.kind === "intent" || c.kind === "boundary" || c.data.status === "needs-you");
+    // boundaries never gate: they firm up as the plan does, and a struck one just goes
+    const needsYouCards = () => store2.cards.filter((c) => store2.plan.followUp ? c.data.status === "needs-you" : c.kind === "intent" || c.data.status === "needs-you");
     // Sections whose heading/hint/add-row should disappear when the "what's
     // left" filter hides every card inside them.
     const SECTION_WRAPS = ["intentsWrap", "discoveredWrap", "mocksWrap", "boundariesWrap", "decisionsWrap", "stepsWrap"];
@@ -2141,7 +3682,7 @@
       const pct = total ? Math.round(answered / total * 100) : 100;
       document.getElementById("progfill").style.width = pct + "%";
       document.getElementById("progtxt").textContent = `${answered} / ${total} cards answered` + (questions ? ` · ${questions} question${questions > 1 ? "s" : ""} for the agent` : "");
-      const anyInput = store2.cards.some((c) => store2.hasInput(c.id)) || store2.agentActions.reexplore || store2.agentActions.note.trim() !== "";
+      const anyInput = store2.cards.some((c) => store2.hasInput(c.id)) || store2.design.notes.length > 0 || Object.keys(store2.design.reviews).length > 0 || store2.agentActions.reexplore || store2.agentActions.note.trim() !== "";
       const blockers = needsYouCards().filter((c) => !store2.satisfied(c.id));
       document.getElementById("sendRound").disabled = !anyInput;
       // Finalize is NEVER hard-blocked — you can finalize early and let the
@@ -2152,17 +3693,16 @@
       document.getElementById("substatus").textContent = questions ? `💬 ${questions} open question${questions > 1 ? "s" : ""} — the agent answers live, or Finalize to let it decide them` : blockers.length ? `🏁 ${blockers.length} required card${blockers.length > 1 ? "s" : ""} still open — answer them, or Finalize to hand them to the agent` : "🏁 All clear — Finalize is the move unless something still nags. Another round is one click away.";
       const left = total - answered;
       const toggle = document.getElementById("leftToggle");
-      toggle.classList.toggle("show", answered >= 3 && left > 0);
       const filtering = document.body.classList.contains("hide-done");
       toggle.classList.toggle("on", filtering);
-      toggle.textContent = filtering ? `Showing ${left} left · show all` : "Show what's left";
-      if (filtering && left === 0) {
-        document.body.classList.remove("hide-done");
-      }
+      toggle.setAttribute("aria-pressed", String(filtering));
+      toggle.textContent = filtering ? `Showing ${left} left · show all` : left ? `Show what's left (${left})` : "Nothing left";
       syncSectionVisibility();
+      if (app2.nav) app2.nav.sync();
     };
     const refreshAll = () => {
       store2.cards.forEach((c) => c.refresh());
+      if (app2.design) app2.design.sync();
       refreshBar();
     };
     app2.refreshBar = refreshBar;
@@ -2170,6 +3710,10 @@
     document.getElementById("leftToggle").addEventListener("click", () => {
       document.body.classList.toggle("hide-done");
       refreshBar();
+    });
+    // the answered card you were in hides once you leave it: its section may be empty now
+    document.addEventListener("focusout", () => {
+      if (document.body.classList.contains("hide-done")) requestAnimationFrame(syncSectionVisibility);
     });
     document.getElementById("expandAll").addEventListener("click", () => {
       const cardEls = document.querySelectorAll(".card");
@@ -2196,9 +3740,11 @@
     };
     const saveEl = () => document.getElementById("savestate");
     const ship = async (action) => {
+      const plan0 = store2.plan;
+      if (action === "finalize" && plan0.design && plan0.design.state === "shaping" && !plan0.followUp) action = "lock-design";
       // Finalize never hard-blocks; instead confirm what the agent will decide
       // when you finalize with required cards or open questions still unanswered.
-      if (action === "finalize") {
+      if (action === "finalize" || action === "lock-design") {
         const openReq = needsYouCards().filter((c) => !store2.satisfied(c.id)).length;
         const openQ = store2.cards.filter((c) => store2.hasQuestion(c.id)).length;
         if (openReq || openQ) {
@@ -2207,7 +3753,7 @@
           if (openQ) parts.push(`${openQ} open question${openQ > 1 ? "s" : ""}`);
           const ok = window.confirm(
             `You're finalizing with ${parts.join(" and ")} still unanswered. ` +
-            `The agent will decide ${openReq && openQ ? "them" : "it"} for you. Finalize anyway?`
+            `The agent will decide ${openReq && openQ ? "them" : "it"} for you. ${action === "lock-design" ? "Lock the design" : "Finalize"} anyway?`
           );
           if (!ok) return;
         }
@@ -2216,7 +3762,7 @@
       const fin = document.getElementById("finalize");
       send.disabled = true;
       fin.disabled = true;
-      const btn = action === "finalize" ? fin : send;
+      const btn = action === "send-round" ? send : fin;
       const btnLabel = btn.textContent;
       btn.textContent = "Sending…";
       let delivered = false;
@@ -2240,9 +3786,9 @@
         saveEl().className = "savestate warn";
         return;
       }
-      document.getElementById("wrap").querySelectorAll("header,.lead,.lead-more,.followup,.goal,.howto-d,.progress,#boundariesWrap,#intentsWrap,#discoveredWrap,#mocksWrap,#decisionsWrap,#diagramWrap,#stepsWrap,#finalVerifyWrap,#nextRoundWrap").forEach((n) => n.style.display = "none");
-      document.getElementById("doneBig").textContent = action === "finalize" ? store2.plan.followUp ? "🎉 Follow-ups answered — the build resumes." : "🎉 Plan finalized — handed back to the agent." : "✓ Round sent to the agent.";
-      document.getElementById("doneSmall").textContent = action === "finalize" ? "All saved. The agent has your plan and is taking it from here — you can close this tab." : "All saved. The agent is working on your round — you can close this tab.";
+      document.getElementById("wrap").querySelectorAll("header,.lead,.lead-more,.toprow,.followup,.goal,.howto-d,.progress,#boundariesWrap,#intentsWrap,#discoveredWrap,#designWrap,#mocksWrap,#decisionsWrap,#diagramWrap,#stepsWrap,#finalVerifyWrap,#nextRoundWrap").forEach((n) => n.style.display = "none");
+      document.getElementById("doneBig").textContent = action === "lock-design" ? "🔒 Design locked: handed back to the agent." : action === "finalize" ? store2.plan.followUp ? "🎉 Follow-ups answered — the build resumes." : "🎉 Plan finalized — handed back to the agent." : "✓ Round sent to the agent.";
+      document.getElementById("doneSmall").textContent = action === "lock-design" ? "All saved. The agent now writes the intents, boundaries and steps from the design you agreed, and opens the deck again. You can close this tab." : action === "finalize" ? "All saved. The agent has your plan and is taking it from here — you can close this tab." : "All saved. The agent is working on your round — you can close this tab.";
       document.getElementById("done").classList.add("show");
       document.getElementById("submitbar").style.display = "none";
       window.scrollTo(0, 0);
@@ -2270,6 +3816,7 @@
       store2.round = newPlan.round || store2.round;
       lastPlanRev = newPlan.rev || lastPlanRev;
       app2.renderSections();
+      if (app2.design) app2.design.replan();
       store2.cards.forEach((c) => {
         if (openIds.has(c.id)) c.el.classList.add("open");
         const p = store2.pendingAsk[c.id];
@@ -2424,6 +3971,15 @@
         setTimeout(tick, awaitingReply() ? 1e3 : 4e3);
       };
       setTimeout(tick, 1e3);
+    };
+    // a pick goes to the agent the moment it is made, so the plan can follow it while the user goes on
+    window.__pickNow = (cardId, choice) => {
+      fetch("/pick", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cardId, choice: choice || null })
+      }).catch(() => {
+      });
     };
     window.__askNow = (cardId, text) => {
       if (!text || !text.trim()) return false;
@@ -2685,9 +4241,11 @@
     persist();
     if (app.refreshAll) app.refreshAll();
   };
+  app.design = createDesign(app);
   var live = createLive(app);
   var sections = createSections(app);
   sections.renderSections();
+  app.nav = createNav(app);
   // apply saved selections/state to the freshly-built cards on first paint —
   // without this, saved choices stay invisible until the first click triggers
   // a refresh (the "click one, all appear" bug).

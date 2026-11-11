@@ -27,6 +27,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e ".[test]"
+      - run: python -m playwright install --with-deps chromium
       - run: pytest -q
 
   browser-e2e:

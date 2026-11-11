@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>acme jobtrack (prototype)</title>
+<link rel="stylesheet" href="app.css">
+<style>.proto-hints :is(a[href^="#/"]:not([data-out]), [data-action]:not(form), [data-change], [data-input], summary, form[data-action] [type=submit]){outline:2px solid rgba(37,99,235,.85)!important;outline-offset:1px;border-radius:4px}.proto-hints :is(a[href], button, [role=button], select, input[type=checkbox], input[type=radio], summary, [data-action]:not(form)):not(:is(a[href^="#/"]:not([data-out]), [data-action]:not(form), [data-change], [data-input], summary, form[data-action] [type=submit])){outline:2px dashed rgba(120,113,108,.9)!important;outline-offset:1px;border-radius:4px}</style></head>
+<body>
+<div id="app"><div class="shell" data-shell="">
+<header class="topbar">
+<a class="brand" href="#"><span class="brand-dot" aria-hidden="true"></span><span>acme <span class="brand-sub">jobtrack</span></span></a>
+<button type="button" class="btn btn-ghost" data-action="toggleMenu" aria-expanded="false" aria-controls="sidebar"><svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>Menu</button>
+</header>
+<aside class="sidebar" id="sidebar">
+<a class="brand" href="#"><span class="brand-dot" aria-hidden="true"></span><span>acme<br><span class="brand-sub">jobtrack</span></span></a>
+<nav class="nav" aria-label="Main">
+<a class="nav-link" href="#">Today <span class="nav-count">3</span></a>
+<a class="nav-link" href="#">Changes</a>
+<a class="nav-link" href="#" data-out="app">All opportunities <span class="nav-count">34</span></a>
+<p class="nav-section">Offers</p>
+<a class="nav-link" href="#" data-out="app">Product build <span class="nav-count">11</span></a><a class="nav-link" href="#" data-out="app">Code review <span class="nav-count">9</span></a><a class="nav-link" href="#" data-out="app">Team workshops <span class="nav-count">5</span></a>
+<p class="nav-section">Jobs</p>
+<a class="nav-link" href="#" aria-current="page">Applications <span class="nav-count">9</span></a>
+
+<p class="nav-section">Add leads</p>
+<a class="nav-link" href="#" data-out="app">Find leads</a>
+<a class="nav-link" href="#" data-out="app">Import</a>
+<div class="nav-gap" aria-hidden="true"></div>
+<a class="nav-link" href="#" data-out="app">Settings</a>
+</nav>
+</aside>
+<main class="main" id="main">
+
+<header class="page-head">
+<div class="page-titles">
+
+<h1>Job applications</h1>
+<p class="page-sub">Jobs you found, and applications read from your email.</p>
+</div>
+<div class="page-actions"><a class="btn btn-ghost" href="#" data-out="app">Find new</a>
+<a class="btn btn-primary" href="#" data-out="app"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"></path></svg>Add a job</a></div>
+</header>
+<div id="pipeline-tabs" class="tab-row">
+<nav class="tabs" aria-label="Filter"><a class="tab" href="#" data-action="setTab" data-arg="open" aria-current="page">All <span class="count">9</span></a><a class="tab" href="#" data-action="setTab" data-arg="lost">Lost <span class="count">1</span></a></nav>
+</div>
+<div class="table-tools">
+<form class="table-search" role="search" aria-label="Search this table" data-action="keepMenu">
+<label class="sr-only" for="table-q">Search</label>
+<input class="input" id="table-q" type="search" name="q" value="" placeholder="Search company, role, person" autocomplete="off" maxlength="100" data-input="search">
+</form>
+<div id="table-chips" class="table-chips">
+
+
+<span class="table-count">9 shown</span>
+</div>
+</div>
+<div class="list-split list-split-pipeline"><div class="split"><div class="split-main"><div id="pipeline-table" class="lead-table proto-jobs">
+<div class="grid-box grid-pin">
+<div class="grid-scroll" role="region" aria-label="Applications" tabindex="0">
+<table class="grid">
+<thead><tr><th scope="col"><button type="button" class="th-btn" id="th-name-0" aria-haspopup="dialog" aria-expanded="false" aria-controls="colmenu-name" data-colmenu="name" data-action="colMenu" data-arg="name">Company<span class="th-caret" aria-hidden="true"></span></button></th><th scope="col"><button type="button" class="th-btn" id="th-who-1" aria-haspopup="dialog" aria-expanded="false" aria-controls="colmenu-who" data-colmenu="who" data-action="colMenu" data-arg="who">Role<span class="th-caret" aria-hidden="true"></span></button></th><th scope="col"><button type="button" class="th-btn" id="th-stage-2" aria-haspopup="dialog" aria-expanded="false" aria-controls="colmenu-stage" data-colmenu="stage" data-action="colMenu" data-arg="stage">Stage<span class="th-caret" aria-hidden="true"></span></button></th><th scope="col"><button type="button" class="th-btn" id="th-close-3" aria-haspopup="dialog" aria-expanded="false" aria-controls="colmenu-close" data-colmenu="close" data-action="colMenu" data-arg="close">Close<span class="sort-mark" role="img" aria-label="sorted, highest first"><svg class="icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 9l6 6 6-6"></path></svg></span><span class="th-caret" aria-hidden="true"></span></button></th><th scope="col"><button type="button" class="th-btn" id="th-who-4" aria-haspopup="dialog" aria-expanded="false" aria-controls="colmenu-who" data-colmenu="who" data-action="colMenu" data-arg="who">Role<span class="th-caret" aria-hidden="true"></span></button></th><th scope="col"><button type="button" class="th-btn" id="th-pay-5" aria-haspopup="dialog" aria-expanded="false" aria-controls="colmenu-pay" data-colmenu="pay" data-action="colMenu" data-arg="pay">Pay<span class="th-caret" aria-hidden="true"></span></button></th><th scope="col"><button type="button" class="th-btn" id="th-where-6" aria-haspopup="dialog" aria-expanded="false" aria-controls="colmenu-where" data-colmenu="where" data-action="colMenu" data-arg="where">Where<span class="th-caret" aria-hidden="true"></span></button></th><th scope="col"><button type="button" class="th-btn" id="th-source-7" aria-haspopup="dialog" aria-expanded="false" aria-controls="colmenu-source" data-colmenu="source" data-action="colMenu" data-arg="source">Source<span class="th-caret" aria-hidden="true"></span></button></th><th scope="col"><button type="button" class="th-btn" id="th-touch-8" aria-haspopup="dialog" aria-expanded="false" aria-controls="colmenu-touch" data-colmenu="touch" data-action="colMenu" data-arg="touch">Last touch<span class="th-caret" aria-hidden="true"></span></button></th><th scope="col"><button type="button" class="th-btn" id="th-step-9" aria-haspopup="dialog" aria-expanded="false" aria-controls="colmenu-step" data-colmenu="step" data-action="colMenu" data-arg="step">Next step<span class="th-caret" aria-hidden="true"></span></button></th></tr></thead>
+<tbody>
+<tr data-company-id="brightline" class="proto-row" data-action="open" data-arg="#/company/brightline">
+<td title="Brightline Health"><div class="cell-flex cap-flex cap-name"><a class="row-btn" href="#">Brightline Health</a></div></td>
+<td title="Principal AI Engineer"><span class="cap cap-who">Principal AI Engineer</span></td>
+<td title="Offer"><span class="cap cap-status"><span class="status"><span class="dot dot-active" aria-hidden="true"></span>Offer</span></span></td>
+<td class="close-col"><span class="close-pct">85%<span class="bar" aria-hidden="true"><span class="bar-fill" style="width: 85%"></span></span></span></td>
+<td title="Principal AI Engineer"><span class="cap cap-who">Principal AI Engineer</span></td>
+<td title="$220K to $250K"><span class="cap cap-pay">$220K to $250K</span></td>
+<td title="Remote (EU hours)"><span class="cap cap-where">Remote (EU hours)</span></td>
+<td title="Referral"><span class="cap cap-src">Referral</span></td>
+<td title="Email, Oct 28"><span class="cap cap-touch">Email, Oct 28</span></td>
+<td title="Answer the offer, today"><span class="cap cap-step">Answer the offer, today</span></td>
+</tr><tr data-company-id="vela" class="proto-row" data-action="open" data-arg="#/company/vela">
+<td title="Vela Labs"><div class="cell-flex cap-flex cap-name"><a class="row-btn" href="#">Vela Labs</a></div></td>
+<td title="Head of AI Engineering"><span class="cap cap-who">Head of AI Engineering</span></td>
+<td title="Final"><span class="cap cap-status"><span class="status"><span class="dot dot-active" aria-hidden="true"></span>Final</span></span></td>
+<td class="close-col"><span class="close-pct">70%<span class="bar" aria-hidden="true"><span class="bar-fill" style="width: 70%"></span></span></span></td>
+<td title="Head of AI Engineering"><span class="cap cap-who">Head of AI Engineering</span></td>
+<td title="$230K to $260K"><span class="cap cap-pay">$230K to $260K</span></td>
+<td title="Remote (US hours)"><span class="cap cap-where">Remote (US hours)</span></td>
+<td title="Referral"><span class="cap cap-src">Referral</span></td>
+<td title="Email, Oct 26"><span class="cap cap-touch">Email, Oct 26</span></td>
+<td title="Prep the final round, Nov 2"><span class="cap cap-step">Prep the final round, Nov 2</span></td>
+</tr><tr data-company-id="halden" class="proto-row" data-action="open" data-arg="#/company/halden">
+<td title="Halden Grid"><div class="cell-flex cap-flex cap-name"><a class="row-btn" href="#">Halden Grid</a></div></td>
+<td title="Principal Engineer"><span class="cap cap-who">Principal Engineer</span></td>
+<td title="Technical"><span class="cap cap-status"><span class="status"><span class="dot dot-active" aria-hidden="true"></span>Technical</span></span></td>
+<td class="close-col"><span class="close-pct">55%<span class="bar" aria-hidden="true"><span class="bar-fill" style="width: 55%"></span></span></span></td>
+<td title="Principal Engineer"><span class="cap cap-who">Principal Engineer</span></td>
+<td title="$185K to $215K"><span class="cap cap-pay">$185K to $215K</span></td>
+<td title="Hybrid, Berlin"><span class="cap cap-where">Hybrid, Berlin</span></td>
+<td title="Welljobs"><span class="cap cap-src">Welljobs</span></td>
+<td title="Email, Oct 23"><span class="cap cap-touch">Email, Oct 23</span></td>
+<td class="late" title="Send the take-home, Oct 28"><span class="cap cap-step"><span class="sr-only">Overdue: </span>Send the take-home, Oct 28</span></td>
+</tr><tr data-company-id="nimbus" class="proto-row" data-action="open" data-arg="#/company/nimbus">
+<td title="Nimbus Robotics"><div class="cell-flex cap-flex cap-name"><a class="row-btn" href="#">Nimbus Robotics</a></div></td>
+<td title="Staff Engineer, AI"><span class="cap cap-who">Staff Engineer, AI</span></td>
+<td title="Hiring manager"><span class="cap cap-status"><span class="status"><span class="dot dot-active" aria-hidden="true"></span>Hiring manager</span></span></td>
+<td class="close-col"><span class="close-pct">45%<span class="bar" aria-hidden="true"><span class="bar-fill" style="width: 45%"></span></span></span></td>
+<td title="Staff Engineer, AI"><span class="cap cap-who">Staff Engineer, AI</span></td>
+<td title="$175K to $200K"><span class="cap cap-pay">$175K to $200K</span></td>
+<td title="On-site, Lisbon"><span class="cap cap-where">On-site, Lisbon</span></td>
+<td title="LinkedIn"><span class="cap cap-src">LinkedIn</span></td>
+<td title="Email, Oct 25"><span class="cap cap-touch">Email, Oct 25</span></td>
+<td title="Book the hiring manager call, today"><span class="cap cap-step">Book the hiring manager call, today</span></td>
+</tr><tr data-company-id="northwind" class="proto-row" data-action="open" data-arg="#/company/northwind">
+<td title="Northwind Labs"><div class="cell-flex cap-flex cap-name"><a class="row-btn" href="#">Northwind Labs</a></div></td>
+<td title="Staff AI Engineer"><span class="cap cap-who">Staff AI Engineer</span></td>
+<td title="Hiring manager"><span class="cap cap-status"><span class="status"><span class="dot dot-active" aria-hidden="true"></span>Hiring manager</span></span></td>
+<td class="close-col"><span class="close-pct">45%<span class="bar" aria-hidden="true"><span class="bar-fill" style="width: 45%"></span></span></span></td>
+<td title="Staff AI Engineer"><span class="cap cap-who">Staff AI Engineer</span></td>
+<td title="$210K to $240K"><span class="cap cap-pay">$210K to $240K</span></td>
+<td title="Remote (EU hours)"><span class="cap cap-where">Remote (EU hours)</span></td>
+<td title="LinkedIn"><span class="cap cap-src">LinkedIn</span></td>
+<td title="Email, Oct 28"><span class="cap cap-touch">Email, Oct 28</span></td>
+<td title="Technical chat, Nov 3"><span class="cap cap-step">Technical chat, Nov 3</span></td>
+</tr><tr data-company-id="tessel" class="proto-row" data-action="open" data-arg="#/company/tessel">
+<td title="Tessel AI"><div class="cell-flex cap-flex cap-name"><a class="row-btn" href="#">Tessel AI</a></div></td>
+<td title="Senior ML Engineer"><span class="cap cap-who">Senior ML Engineer</span></td>
+<td title="Recruiter screen"><span class="cap cap-status"><span class="status"><span class="dot dot-active" aria-hidden="true"></span>Recruiter screen</span></span></td>
+<td class="close-col"><span class="close-pct">35%<span class="bar" aria-hidden="true"><span class="bar-fill" style="width: 35%"></span></span></span></td>
+<td title="Senior ML Engineer"><span class="cap cap-who">Senior ML Engineer</span></td>
+<td title="$150K to $175K"><span class="cap cap-pay">$150K to $175K</span></td>
+<td title="On-site, Amsterdam"><span class="cap cap-where">On-site, Amsterdam</span></td>
+<td title="Topgig"><span class="cap cap-src">Topgig</span></td>
+<td title="Email, Oct 26"><span class="cap cap-touch">Email, Oct 26</span></td>
+<td title="Recruiter call, Oct 30"><span class="cap cap-step">Recruiter call, Oct 30</span></td>
+</tr><tr data-company-id="orbital" class="proto-row" data-action="open" data-arg="#/company/orbital">
+<td title="Orbital Payments"><div class="cell-flex cap-flex cap-name"><a class="row-btn" href="#">Orbital Payments</a></div></td>
+<td title="Staff AI Engineer"><span class="cap cap-who">Staff AI Engineer</span></td>
+<td title="Applied"><span class="cap cap-status"><span class="status"><span class="dot dot-prospect" aria-hidden="true"></span>Applied</span></span></td>
+<td class="close-col"><span class="close-pct">15%<span class="bar" aria-hidden="true"><span class="bar-fill" style="width: 15%"></span></span></span></td>
+<td title="Staff AI Engineer"><span class="cap cap-who">Staff AI Engineer</span></td>
+<td title="$200K to $225K"><span class="cap cap-pay">$200K to $225K</span></td>
+<td title="Remote"><span class="cap cap-where">Remote</span></td>
+<td title="LinkedIn"><span class="cap cap-src">LinkedIn</span></td>
+<td title="Email, Oct 29"><span class="cap cap-touch">Email, Oct 29</span></td>
+<td title="Call Sam Rivera about the two roles, Oct 30"><span class="cap cap-step">Call Sam Rivera about the two roles, Oct 30</span></td>
+</tr><tr data-company-id="quarry" class="proto-row" data-action="open" data-arg="#/company/quarry">
+<td title="Quarry Data"><div class="cell-flex cap-flex cap-name"><a class="row-btn" href="#">Quarry Data</a></div></td>
+<td title="AI Platform Lead"><span class="cap cap-who">AI Platform Lead</span></td>
+<td title="Applied"><span class="cap cap-status"><span class="status"><span class="dot dot-prospect" aria-hidden="true"></span>Applied</span></span></td>
+<td class="close-col"><span class="close-pct">15%<span class="bar" aria-hidden="true"><span class="bar-fill" style="width: 15%"></span></span></span></td>
+<td title="AI Platform Lead"><span class="cap cap-who">AI Platform Lead</span></td>
+<td title="$160K to $185K"><span class="cap cap-pay">$160K to $185K</span></td>
+<td title="Hybrid, London"><span class="cap cap-where">Hybrid, London</span></td>
+<td title="Welljobs"><span class="cap cap-src">Welljobs</span></td>
+<td title="Applied, Oct 25"><span class="cap cap-touch">Applied, Oct 25</span></td>
+<td title="Check for a reply, Nov 4"><span class="cap cap-step">Check for a reply, Nov 4</span></td>
+</tr><tr data-company-id="kestrel-bio-a-7" class="proto-row" data-action="open" data-arg="#/company/kestrel-bio-a-7">
+<td title="Kestrel Bio"><div class="cell-flex cap-flex cap-name"><a class="row-btn" href="#">Kestrel Bio</a></div></td>
+<td title="Lead AI Engineer"><span class="cap cap-who">Lead AI Engineer</span></td>
+<td title="New"><span class="cap cap-status"><span class="status"><span class="dot dot-contact" aria-hidden="true"></span>New</span></span></td>
+<td class="close-col"><span class="close-pct">5%<span class="bar" aria-hidden="true"><span class="bar-fill" style="width: 5%"></span></span></span></td>
+<td title="Lead AI Engineer"><span class="cap cap-who">Lead AI Engineer</span></td>
+<td title="Not known yet"><span class="cap cap-pay">Not known yet</span></td>
+<td title="Not known yet"><span class="cap cap-where">Not known yet</span></td>
+<td title="Email"><span class="cap cap-src">Email</span></td>
+<td title="Email, Oct 29"><span class="cap cap-touch">Email, Oct 29</span></td>
+<td title="Reply to Topgig, Oct 30"><span class="cap cap-step">Reply to Topgig, Oct 30</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="grid-foot">Closest to closing first. Click a company to open it.</p>
+</div>
+</div></div><div class="split-side" id="panel-slot"></div></div></div>
+</main>
+</div></div>
+
+
+
+
+
+<div style="position: absolute; left: 0px; top: 0px; width: 0px; height: 0px; z-index: 9998;"></div><script src="proto-kit.js"></script>
+</body></html>

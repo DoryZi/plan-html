@@ -1,5 +1,13 @@
 import { test, expect } from "./fixtures.js";
 
+// Reference sections (steps, finish line, discovered) start folded: open one from its heading.
+const openSection = async (page, id) => {
+  const wrap = page.locator(`#${id}`);
+  if (await wrap.evaluate((el) => el.classList.contains("sec-closed"))) await wrap.locator("> h2 .sec-toggle").click();
+};
+// The agent box of a card opens from its "Ask the agent" button.
+const openChat = (card) => card.locator(".card-tools button", { hasText: "Ask the agent" }).click();
+
 test("loads the deck with the plan's title and sections", async ({ page, deck }) => {
   await page.goto(deck.url);
   await expect(page.locator("#title")).toHaveText("E2E plan");
@@ -57,6 +65,7 @@ test("strike a card marks it dismissed and drops it from the round", async ({ pa
 
 test("edit a step in place; edited step rides back with its draft", async ({ page, deck }) => {
   await page.goto(deck.url);
+  await openSection(page, "stepsWrap");
   const step = page.locator('#steps .card[data-id="step-0"]');
   await step.locator(".card-head").click(); // expand
   const desc = step.locator(".authoring textarea.ainput, .authoring input.ainput");
@@ -72,6 +81,8 @@ test("edit a step in place; edited step rides back with its draft", async ({ pag
 test("interview popup asks one question at a time and lands answers on the plan", async ({ page, deck }) => {
   await page.goto(deck.url);
   const ivBtn = page.locator("#grillPlan");
+  await expect(ivBtn).toBeHidden(); // the interview opens from the row under the goal
+  await page.locator("#topRow button", { hasText: "Interview me" }).click();
   await expect(ivBtn).toBeVisible();
   await ivBtn.click();
   await expect(page.locator("#ivOverlay")).toBeVisible();
@@ -112,6 +123,7 @@ test("interview popup asks one question at a time and lands answers on the plan"
 
 test("editable finish-line: add a verify row, send carries it", async ({ page, deck }) => {
   await page.goto(deck.url);
+  await openSection(page, "finalVerifyWrap");
   await page.locator("#fvAddWrap .add-card").click();
   const rows = page.locator("#fvRows tr");
   await expect(rows).toHaveCount(2); // original + new
@@ -167,6 +179,8 @@ test("agent answer clears the open-question state (no lingering finalize nag)", 
   // ask a question on the decision card via its chat composer
   const card = page.locator('#decisions .card[data-id="d1"]');
   await card.locator(".card-head").click(); // expand
+  await expect(card.locator(".chat-input")).toBeHidden(); // the agent box opens on demand
+  await openChat(card);
   await card.locator(".chat-input").fill("Why this fork?");
   await card.locator(".chat-send").click();
   // the ask is queued for the agent
@@ -187,6 +201,7 @@ test("agent answer clears the open-question state (no lingering finalize nag)", 
 
 test("steps are drag-reorderable; new order rides back in the round", async ({ page, deck }) => {
   await page.goto(deck.url);
+  await openSection(page, "stepsWrap");
   await expect(page.locator("#steps .card")).toHaveCount(2);
   // HTML5 drag-and-drop can't be driven by mouse moves in Chromium, so dispatch
   // the native drag events (sharing one DataTransfer) the deck's handlers expect.
@@ -228,6 +243,7 @@ test("agent answer written to the plan survives a reconnect (durable, not just S
   await page.goto(deck.url);
   const card = page.locator('#decisions .card[data-id="d1"]');
   await card.locator(".card-head").click();
+  await openChat(card);
   await card.locator(".chat-input").fill("Why this fork?");
   await card.locator(".chat-send").click();
   await expect.poll(() => deck.readQuestions().some((q) => q.cardId === "d1"), { timeout: 5000 }).toBe(true);
@@ -283,7 +299,7 @@ test("show what's left collapses fully-hidden sections, and restores them", asyn
   // intent card is still open.
   await page.locator('#decisions .card[data-id="d1"] .qbtn').first().click();
   const toggle = page.locator("#leftToggle");
-  await expect(toggle).toHaveClass(/show/);
+  await expect(toggle).toBeVisible(); // always in the dock
 
   await toggle.click();
   // Regression: sections whose every card is hidden must drop their heading and
@@ -386,6 +402,7 @@ test("discovered section is hidden when empty, shown with the finding when prese
   await expect(page.locator("#discoveredWrap")).toBeVisible();
   const card = page.locator('#discovered .card[data-id="disc-1"]');
   await expect(card).toHaveCount(1);
+  await openSection(page, "discoveredWrap");
   await card.click();
   await expect(card).toContainText("middleware/throttle.py already limits per user");
   await expect(card).toContainText("Reuse it instead of adding a new one");

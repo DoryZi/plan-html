@@ -30,6 +30,8 @@ a terminal.
 
 ## Features
 
+- **Design in the same round** — when the UI matters, a question shows 2 or 3 options as strips of mock screens; open any of them full size, click through it, and pin notes to its elements.
+- **Easy to scan** — sections fold from their headings, a menu lists the sections with what is left in each, answered cards fold away, and "Show what's left" hides everything you already answered.
 - **Reshapeable** — add, edit, strike and drag-reorder cards, steps, and finish-line rows; your changes are authoritative and ride back to the agent.
 - **Live answers** — ask a card a question and the agent's reply streams back into it (SSE), with the answer written into the plan so it survives a dropped connection.
 - **Works remotely** — serve on your LAN or behind a tunnel; an adaptive polling fallback keeps updates flowing even through proxies that buffer SSE.
@@ -44,7 +46,12 @@ a terminal.
 | `serve_plan.py` | The server. Renders `plan.json` into the deck, serves it on `127.0.0.1`, autosaves answers, streams plan changes over SSE (`--live`), and prints each round to stdout. Zero dependencies (stdlib only). |
 | `templates/deck.html` | The deck — a single self-contained, offline HTML file, hand-edited. Its JavaScript is organized into a few labeled top-level `<script>` blocks that run in document order and share one global scope. No build step, no modules, no CDN. |
 | `scripts/lint-deck.js` | Extracts the deck's inline `<script>` blocks into a temp file and runs ESLint over them. |
-| `tests/` | `tests/e2e` (pytest HTTP + Playwright browser). |
+| `templates/proto-kit.js` | The small script a mock or prototype screen loads so the deck can open it full size, step through it and pin notes to it. |
+| `finalize_plan.py` | Writes the final `plan.md` (every card, its answer and discussion, the steps and checks) when you finalize. |
+| `cycles.py` | Makes and lists the dated cycle folders (`cycles/YYYY-MM-DD-NN-<slug>/`) plans are kept in. |
+| `check_prototype.py` | Clicks through a plan's mock screens or prototype in a headless browser and reports dead controls (needs `pip install playwright`). |
+| `examples/` | Two worked plans: `mocks/` (a design question answered with mock screens) and `prototype/` (a clickable prototype). |
+| `tests/` | pytest: server unit and HTTP tests, and browser tests of the deck on the examples. `tests/e2e`: Playwright (JS) browser tests. |
 
 ## Install
 

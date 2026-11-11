@@ -1,6 +1,6 @@
 ---
 name: plan-html
-description: Interactive decision-deck planning. Same research/design thinking as /plan, but the plan is an interactive HTML deck the user works through in the browser — intent cards and decision cards, answered with buttons OR free text, with per-card questions to the agent — iterated in rounds until finalized. Every answer autosaves, so interruptions lose nothing. Use whenever the user wants to plan, review, or iterate on a plan interactively instead of reading markdown in the terminal.
+description: "Interactive decision-deck planning. Same research/design thinking as /plan, but the plan is an interactive HTML deck the user works through in the browser — intent cards and decision cards, answered with buttons OR free text, with per-card questions to the agent — iterated in rounds until finalized. When the UI matters it designs in the same round: each question shows 2 or 3 options as strips of mock screens built on the real app's look and on earlier cycles, any of which opens full size with notes pinned to elements, and the intents and steps are written for the recommended option and follow the pick; one round is the norm. Works the same in Claude Code, Codex and Pi. Every answer autosaves, so interruptions lose nothing. Use whenever the user wants to plan, review, or iterate on a plan interactively instead of reading markdown in the terminal."
 ---
 
 <!-- experiment-banner:start -->
@@ -15,9 +15,8 @@ description: Interactive decision-deck planning. Same research/design thinking a
 
 # Plan (HTML / interactive, round-based)
 
-Same goal as `/plan` — research a codebase and design an implementation plan
-interactively — but the **review surface is the browser deck, not the
-terminal**. The plan is delivered as cards the user answers in place:
+Research a codebase and design an implementation plan interactively. The
+**review surface is the browser deck, not the terminal**. The plan is delivered as cards the user answers in place:
 **intent cards** (what they want, in their words, editable) and **decision
 cards** (forks in the design). Free text counts as a full answer; every card
 can carry a question to the agent; rounds repeat until the user finalizes.
@@ -25,6 +24,19 @@ The user can also **reshape the plan directly**: add their own intents,
 boundaries, decisions, or steps with a "+ Add" button per section, and strike
 out any card (✕) to remove it. Added cards come back tagged `userAdded`;
 struck cards simply vanish from the round.
+
+## Running in Codex or Pi
+
+Written for Claude Code. In Codex or Pi, follow it with three swaps (Pi finds this skill in
+`~/.pi/agent/skills/plan-html`, Codex in `~/.agents/skills/plan-html`, both links to this folder):
+
+- **Explore (Stage 2):** there are no parallel `Agent` calls. Explore the code yourself, or use Codex sub-agents if they are enabled.
+- **Everything else is the same**, design first included: the mock screens are plain files you write, the deck
+  shows them, and `check_prototype.py` runs the same everywhere, so every harness gives the user the same design.
+- **Serve without `--live`, in the foreground:**
+  `python3 "${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/plan-html}/serve_plan.py" --plan <abs-path>/plan.json --timeout 1800`
+  It opens the deck and blocks until the user sends the round, finalizes, or times out, then exits with the result. Handle it as in Round handling, rebuild `plan.json`, and serve again for the next round. Give the shell call a timeout above 1800 seconds.
+- **No live Q&A inside the open page:** `Monitor`, `run_in_background` and answers streamed into the deck are Claude Code only. Questions typed in the deck arrive with the round; answer them in the next round's cards.
 
 ## HARD OUTPUT RULES — read first
 
@@ -35,11 +47,21 @@ struck cards simply vanish from the round.
 2. **Terminal output is status lines only**, a few short lines per round:
    what stage you're in, the deck URL, the round number, and (between rounds)
    a one-line note of what changed. Nothing else.
-3. **Plans persist.** Write `plan.json` to
-   `<repo>/design/plans/<slug>/plan.json` (gitignored — verify; add
-   `design/plans/` to `.gitignore` if missing). Never `/tmp`: the sibling
-   `answers.json` autosave must survive reboots and be findable after an
-   interrupted session.
+3. **Plans persist, in a cycle folder.** Every step of a project gets one folder, in
+   order, like a chain of migrations: `<repo>/cycles/YYYY-MM-DD-NN-<slug>/`.
+   Make it with
+   `python3 "${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/plan-html}/cycles.py" new --root <absolute repo path> --slug <slug>`
+   (it picks NN, makes `.work/` and adds `cycles/*/.work/` to `.gitignore`). Inside:
+   - `intent.md`, `spec.md` when the step has them; `plan.md`, the final plan builders
+     execute (every card, its answer and discussion, steps, walk-throughs, design notes, final
+     checks), and `plan.json`, the same plan as data, the reference plan.md points to (both
+     written at Finalize; older cycles have `plan.json` and `decisions.md`);
+     `discussions/` for any discussion the user saves during the step; `verify/` reports.
+   - `.work/` (never committed): the live deck `.work/plan.json` with its answers and
+     questions files, and any other working files.
+   The cycle folder carries the date, so the files inside keep plain names.
+   Never `/tmp`: the sibling `answers.json` autosave must survive reboots and be
+   findable after an interrupted session.
 4. **Never lose user input.** Before starting a round, check for an existing
    `answers.json` next to the plan — if present, the user has prior answers;
    the server preloads them automatically. On a `timeout` result, the
@@ -48,12 +70,31 @@ struck cards simply vanish from the round.
 
 ## Workflow
 
+### Stage 0: Context from earlier cycles (default: always)
+
+Earlier cycles are input to this one; start fresh only when the user says to ignore the past ("ignore past
+cycles", "start from scratch"). Run
+`python3 "${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/plan-html}/cycles.py" context --root <absolute repo or project path>`
+and read what it points at: each cycle's intent, plan.md (or decisions.md) and spec, the newest design (mock screens or a prototype), and the project's
+other design folders (intent/, spec/, plan/, design/plans/, mocks/). Treat the new intent as a **change to what
+exists**, not a new product: what was decided stays decided (do not ask it again), and when the new intent
+conflicts with an earlier decision, raise it as a `needs-you` card ("Earlier you picked X; this implies Y. Which
+wins?"). Show what you built on as `discovered[]` cards (`source`: the cycle folder or file) so the user can
+strike what is out of date.
+
 ### Stage 1: Understand (chat, minimal)
 
 Ask only what you need to scope the exploration — a couple of questions max.
 The deep interrogation does NOT happen in chat: it happens in the deck
 (Stage 3), where answers persist and the user can think. Do not proceed until
 the user confirms the task framing.
+
+**Does the UI matter?** When the work changes what the user sees or clicks (screens, flows,
+tables, forms), the deck shows the design **and** the plan in one round (Stage 3a + 3b): every UI
+question is 2 or 3 options, each a strip of mock screens the user clicks through, and the intents
+and steps are written for the option you recommend and follow the pick. No separate design round
+(too much back and forth). When the work plainly has no UI (a CLI, a backend job, a
+refactor), skip 3a. When you cannot tell, ask once in chat.
 
 ### Stage 2: Explore (parallel agents)
 
@@ -63,9 +104,87 @@ file paths and line numbers. Synthesize **briefly** (a few lines, not a
 report), confirm with the user, then move on. Detailed findings belong in the
 deck's card bodies, not the terminal.
 
-### Stage 3: Design → plan.json
+### Stage 3a: Design first, as mock screens (when the UI matters)
 
-Draft the plan **directly as `plan.json`** (schema below).
+The user designs by **seeing the flow**: each UI question shows 2 or 3 options, each a strip of up to 3 mock
+screens with the click between them. Pick one and it is settled; the plan in the same deck follows it.
+
+- **One round, everything in it.** The first deck already has the questions, their mock strips, and the
+  intents, steps and checks written for the **recommended** option of each question (say which in the
+  decision's `building`: "Recommended: C."). A pick of another option rewrites the intents and steps that
+  assumed the recommendation (live, Stage 4; or on the next round). The user finalizes from that deck; a
+  second round happens only if they send one. Never a design-only round followed by a plan round.
+- **A pick is settled, once.** A picked screen means the whole screen as shown: every control on it is in
+  scope and gets built, with the real behavior behind it, no follow-up questions about it. Write the
+  intents and steps to cover all of it. Settled picks from earlier cycles (Stage 0) are never asked again;
+  a later intent that conflicts with one raises a single `needs-you` card ("Earlier you picked X; this
+  implies Y. Which wins?").
+- **Mocks, not a working app** (the interactive part took too long and was not worth it). A
+  screen is one small static HTML page with the app's real CSS and markup (copy `app.css`, the tokens, the
+  fonts; rebuild the shell with the real class names) and the sample data written in. No behavior: the
+  next screen in the strip shows what the click did. The one exception is free: the step's `click` (below)
+  is ringed, and a click on it opens the next screen, so the user clicks through the flow ("otherwise, it's not super clear what the flow is"). Links are inert (`href="#"` or none); a mock that
+  navigates fails the check. Build only the screens the strips need, a minute each; polish is not the point,
+  the grouping and the flow are.
+- **Files:** under the plan's `files/mocks/` (next to the live `plan.json`, so `.work/files/mocks/` in a
+  cycle): one `.html` per screen (`<fork>-<key>-<n>.html`, `<walk-through>-<n>.html`), `app.css`, `fonts/`,
+  and `proto-kit.js` (copy `templates/proto-kit.js` unchanged and load it last: on a static page it
+  swallows clicks but the step's ringed one, and draws the user's pinned notes on their elements). Start from the newest design of an
+  earlier cycle when Stage 0 found one (copy its `files/mocks/` or render its prototype's screens);
+  otherwise from the real app (screenshot a development instance with demo data, never one with real data,
+  and match it). The worked example is `examples/mocks/` in this skill.
+- **Questions with options, each option a flow.** Every real fork in the UI is a decision with
+  `"variant": "<fork>"` and 2 or 3 options (at most 4) that differ in the journey, not in looks.
+  **Options must exclude each other: you would build only one.** Ask of every pair "could the product
+  have both?" If yes, they are not options: several ways into the same thing are one flow with several
+  entry points. A good question is about behavior the user lives with: "the app links on its own" vs
+  "asks me first" vs "links when sure, asks when not". Each option is `{"key": "A", "label": "A. Search
+  your mail", "caption": "<one line>", "steps": [{"title", "screen", "do", "click", "focus"}, …]}`: up to 3 steps
+  (`screen` = the mock file under `files/`, `do` = what the user clicks on that step to reach the next, in
+  words, `click` = that control on this screen: its visible words ("Attach", "2 to confirm") or a CSS
+  selector; every step but the last needs one, `focus` = optional CSS selector to scroll into view for the
+  screenshot). One click per step: a step that needs two ("open the email, then Attach") gets its own screen,
+  or names the last click. Up to about 3 questions a deck.
+- **What the user sees:** each question as a card with one row per option: its label and caption, then
+  its steps as **screenshots** with the click ringed and arrows labeled with it, then **Try it** and **Pick**.
+  **Try it** opens step 1 full size with the click ringed and a bubble saying what to do; a click on it opens
+  the next screen, a click anywhere else does nothing. A click on a screenshot opens that screen full size
+  at that step (‹ › move along the strip). There, **💬 Comment**
+  (or C) lights up the element under the pointer; a click opens a note bubble pinned to that element; a
+  click on a pin edits or deletes it. Pins show on the screenshots too. The card's text box is where the
+  user mixes options ("start like A, confirm like B"): read it as the answer. An intent with `journey`
+  shows that flow's screens next to its words and plays it with ▶ Show me.
+- **Walk-throughs that are not choices** go in `design.journeys[]` (`{id, title, summary, steps}`) and show
+  under "Also in this design" with **✓ Looks right** and **Not now**. They come back as `designReviews`
+  (`[{journey, title, review: "ok" | "skip"}]`): a Looks right walk-through is built and checked (its
+  intent stays), a Not now one leaves this build (its intent goes, a boundary says so).
+- **Check before every round, after every change to the screens:**
+  `python3 "${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/plan-html}/check_prototype.py" --plan <abs path>/plan.json --phone`
+  opens every screen (page errors, live links and sideways scroll at 390 fail; so do a step with no
+  `click` or one its screen does not have, and a screen whose `proto-kit.js` is too old: copy it again) and
+  saves the step screenshots the deck shows (`files/shots/`), each click ringed. It must print `MOCKS OK`. (First run on a machine:
+  `uv run --with playwright playwright install chromium`.)
+- **The deck:** `design.state: "open"`, `width`, `height`, `journeys`; the fork decisions among the other
+  decisions; intents, steps and `finalVerify` as Stage 3b says. Boundaries never gate and can come later.
+- **Notes come back as `designNotes`** with each round: `{id, route, routeFull, title, device, variants,
+  element?, selector?, ex?, ey?, x?, y?, text, journey?, step?}` (`route` is the screen file). A note is a
+  change request for that screen: change the mock, retake the shots, bump `rev`, and answer every note in
+  `design.replies` (`{"<note id>": "Done: Undo is a button now"}`); `designNotesEarlier` is the history.
+- **Picks arrive as they happen** (`{"action": "pick", "cardId", "choice"}` on the server's stdout, Stage 4):
+  when a pick differs from the recommendation, rewrite the intents and steps for it right away, bump
+  `rev`, write `plan.json`; the deck updates under the user while they go on.
+
+**Opt-in: a clickable prototype.** Only when the user asks for one (a flow whose states a strip cannot
+show). Then `design.prototype` names the entry file under `files/proto/`, steps use `route` (hashes,
+`?scenario=` for a later state) instead of `screen`, `design.state: "shaping"` makes a design-only round
+whose Finalize reads **Lock the design**, and `check_prototype.py` runs the full click check (every control
+works or says it is outside the design; `PROTOTYPE OK`). The kit's header comment and `examples/prototype/`
+describe it. Everything else above applies.
+
+### Stage 3b: Plan → plan.json
+
+Draft the plan **directly as `plan.json`** (schema below). After a locked design, every intent,
+boundary and step traces back to a picked screen.
 
 **Every plan MUST have a `goal`, `intents[]` with a `verify` per intent, a
 plan-level `diagramSvg`, and grill cards — no exceptions.** `boundaries[]` is
@@ -144,20 +263,14 @@ contained tasks. The user can drop any boundary with its "Not needed" button.
     outermost shapes, no oceans of empty space. Nodes ~140×48 with ~60px
     horizontal gaps read well.
 
-- **UI work gets mocks — always, no exceptions.** Any decision about a
-  screen, page, layout, component, or visual flow MUST present **2–3
-  alternative mocks as its options** — the user picks a design by clicking a
-  mock, not by imagining one from prose. Use option objects (see schema):
-  `{"label", "caption", "html", "width", "height"}` for **hi-fi HTML mocks
-  (default — prefer these)**, or `{"label", "caption", "viewBox", "svg"}` for
-  lo-fi SVG wireframes (fallback only). The deck renders `html` inline in a
-  sandboxed, auto-scaled, zoomable iframe.
-  **Inline only — NEVER as files.** Do not write mock `.html`/`.png` files to
-  disk, do not send mocks as attachments, do not link out. If a visual is not
-  inside the deck card, it does not count as delivered. Mock decisions
-  automatically render in their own prominent **"🎨 Design mocks"** section
-  near the top, expanded by default — you don't need to do anything beyond
-  using option objects.
+- **UI work gets mocks — always, no exceptions.** A decision about a flow (what the user clicks, what
+  opens) is a Stage 3a question: options as strips of mock screen files. A decision about one screen's
+  look alone (a layout, a component) presents **2–3 alternative mocks inline as its options**: option
+  objects `{"label", "caption", "html", "width", "height"}` for hi-fi HTML mocks (prefer these), or
+  `{"label", "caption", "viewBox", "svg"}` for lo-fi wireframes (fallback). The deck renders `html` inline
+  in a sandboxed, auto-scaled, zoomable iframe, in its own **"🎨 Design mocks"** section near the top.
+  Either way the user picks a design by clicking a mock, not by imagining one from prose, and nothing goes
+  out as attachments or links.
 
   - **MOCKS MUST LOOK LIKE THE PRODUCT WE ALREADY HAVE — this is the rule
     that matters most.** A mock that doesn't resemble the real app is worse
@@ -197,6 +310,8 @@ contained tasks. The user can drop any boundary with its "Not needed" button.
     ("denser, scales to 100 items" vs "calmer, 10 items max").
   - Mocks can sit alongside plain-string options on the same card (e.g. a
     third option "None of these — see my notes").
+- **A change across 2 or more screens, or any journey the user will click through, is design
+  first** (Stage 3a: a working prototype), not mocks. Mocks stay for a single layout pick.
 - **`decisions[]` — the forks.** Any place the design could go more than one
   way: approach, library, boundary, what to defer, how much freedom the agent
   gets. Mark `needs-you` vs `agent-call` vs `fyi`. Use `dependsOn` to link a
@@ -231,10 +346,7 @@ of truth; the page is a live view of it (SSE), and you keep it current.
 1. **Serve in live mode — ALWAYS in the background:**
 
    ```bash
-   # ${CLAUDE_PLUGIN_ROOT} resolves to this skill's install dir (plugin install).
-   # If you cloned manually instead, use that path, e.g. ~/.claude/skills/plan-html
-   python3 "${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/plan-html}/serve_plan.py" \
-     --plan <abs-path>/design/plans/<slug>/plan.json --live
+   python3 "${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/plan-html}/serve_plan.py" --plan <abs-path>/cycles/YYYY-MM-DD-NN-<slug>/.work/plan.json --live
    ```
 
    **Run it with `run_in_background: true` — never foreground.** A
@@ -263,6 +375,14 @@ of truth; the page is a live view of it (SSE), and you keep it current.
    one):
    - `{"action":"ask","id","cardId","text"}` — a live question (also queued in
      `questions.json`).
+   - `{"action":"pick","cardId","choice"}` — a pick, the moment it is made (`choice` null: unpicked).
+     On a design question this is planning while the user plans: when the pick differs from what the
+     intents and steps assume, rewrite them for it now, bump `rev`, write `plan.json`; the deck updates
+     in place. When the pick opens a real question ("You picked B: should To confirm also list the sure
+     ones?"), add it as a new `needs-you` card in the same write: it floats up in the deck while the user
+     goes on, and they answer it there. Never re-ask what the pick settled. Picks on other cards need
+     nothing until the round. (From the bubble no agent watches the open deck: a pick's rewrite and any
+     new question come with the next round, or at Finalize.)
    - the full round object on **Send to agent** / **Finalize plan**.
    - `{"action":"timeout",...}` if the idle timeout hits.
 
@@ -358,7 +478,7 @@ of truth; the page is a live view of it (SSE), and you keep it current.
    ```
    Monitor(persistent: true, command:
      tail -n0 -f <server-output-file> |
-       grep -E --line-buffered '"action": ?"(ask|finalize|send-round|timeout)"')
+       grep -E --line-buffered '"action": ?"(ask|pick|finalize|send-round|lock-design|timeout)"')
    ```
 
    With the Monitor armed, asks, clarifications and finalize are all delivered
@@ -449,6 +569,10 @@ of truth; the page is a live view of it (SSE), and you keep it current.
      questions the user asked and the answers given. Read it before acting on
      `choice`/`answer` — a pick often only makes sense given the discussion, and
      on finalize this is the record of WHY each decision went the way it did.
+   - `designNotes` (top level, design-first decks) — the user's notes on the screens; handle
+     them as Stage 3a says, and answer each note in `design.replies`. A question card's `answer`
+     may mix its options ("start like A, check like B"): build that mix as the flow, or as a new
+     option to compare next round.
    - `edit` — the user rewrote an intent or a boundary in place. Replace the
      card's text with their version (and adjust dependent decisions/steps/
      verify if the rewrite changes scope). An edited boundary is the user
@@ -462,6 +586,9 @@ of truth; the page is a live view of it (SSE), and you keep it current.
    moved, the title moves with it. (The deck reconciles the new title live over
    SSE, so the user sees it update in place.)
 
+3. **If `action` is `"lock-design"`** (the prototype opt-in only) — the user agreed the design: set
+   `design.state: "locked"`, write the plan from the prototype (Stage 3b), then serve the next round.
+
 3. **If `action` is `"send-round"`** — iterate:
    - For every `question`, append to that card's `thread`:
      `{"role":"user","text":<their question>}` then
@@ -473,9 +600,25 @@ of truth; the page is a live view of it (SSE), and you keep it current.
      saying what changed, and re-serve (step 1). The user's prior answers
      reload automatically; their delivered questions are cleared.
 
-4. **If `action` is `"finalize"`** — briefly restate (2–4 lines max) what was
-   decided where it diverged from your defaults, then proceed to build (or
-   hand to `/dev-cycle`). Do **not** re-dump the plan.
+4. **If `action` is `"finalize"`** — first write the final plan:
+
+   ```bash
+   python3 "${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/plan-html}/finalize_plan.py" --plan <live plan.json> --round <server output file>
+   ```
+
+   Leave `--out` off: for a live deck in a cycle's `.work/` the script writes the
+   cycle's `plan.md` and `plan.json` (anywhere else, a dated `YYYY-MM-DD-<slug>-plan.md` and
+   `-plan.json` next to the live plan), in seconds, with no model. It writes every card with its pick, typed answer, edit
+   and Q&A, the steps, walk-throughs, design notes and the final checks table (verify reads it),
+   and copies the live plan's `files/` (the mock screens or prototype included) into the cycle, so do not copy the
+   round into extra files. Hand builders plan.md; it tells them to check plan.json when
+   something is unclear (the live `.work/plan.json` stays a working file). An older cycle's final plan.json becomes a
+   plan.md with `finalize_plan.py --plan <its plan.json>` (no `--round`). The picked screens are the target the build matches, and the
+   next cycle starts from it. A follow-up round after a build writes the final file
+   again (same path). Then briefly restate (2–4 lines max) what was decided where
+   it diverged from your defaults, and proceed to build. After each step, run
+   `/verify --cycle <step number>` against the final plan (and its intent/spec if
+   any); fix FIX FIRST items before the next step. Do **not** re-dump the plan.
 
 5. **If `action` is `"timeout"`** (exit code 1) — the user stepped away.
    Their partial answers are in `saved` and on disk. Say so in one line and
@@ -521,6 +664,7 @@ of truth; the page is a live view of it (SSE), and you keep it current.
       "id": "intent-persist",
       "title": "Answers survive interruptions",  // short card title
       "intent": "I want every answer I give to survive a closed tab, a timeout, or a reboot. (markdown ok)",
+      "journey": "add-email",                      // optional, design first: the walk-through it comes from; its screens show next to the words, ▶ Show me plays it
       "verify": { "method": "e2e", "command": "…exact command…", "expected": "…observable result…" },
       "agentQuestions": [                          // optional — grill the user to sharpen this intent
         { "id": "scope", "q": "Does *every* answer include drag-order, or just card picks? (markdown ok)" }
@@ -564,6 +708,13 @@ of truth; the page is a live view of it (SSE), and you keep it current.
       //   {"label":"Lo-fi", "caption":"blocky wireframe", "viewBox":"0 0 200 140",
       //    "svg":"<rect class='wf-frame' x='4' y='4' width='192' height='132'/>…keep all text inside the box…"}
       // ],
+      // A QUESTION of the design (Stage 3a): each option is a flow; the prototype shows option KEY with ?v=attach:KEY.
+      // "variant": "attach", "variantLabel": "Attach",
+      // "options": [{"key":"A", "label":"A. Search your mail", "caption":"Start on the company, search, attach.",
+      //              "steps":[{"title":"Company", "route":"#/company/northwind", "do":"Add missing email"},
+      //                       {"title":"Search your mail", "route":"#/company/northwind/add-email", "do":"Attach"},
+      //                       {"title":"Linked, with Undo", "route":"#/company/northwind?scenario=linked"}]},
+      //             {"key":"B", "label":"B. Paste and check", "caption":"…", "steps":[…]}],
       "dependsOn": ["intent-persist"],                       // optional; linked cards shown with the user's answers
       "thread": [],                                          // Q&A history, optional
       "diagramSvg": "<rect class='node' …/>…",               // optional per-card diagram (intents too)
@@ -581,6 +732,18 @@ of truth; the page is a live view of it (SSE), and you keep it current.
       "command": "…exact command…", "expected": "…observable result…" }
   ],
 
+  "design": {                                     // design first (Stage 3a): mock screens, in the same deck as the plan
+    "state": "open",                              // open (the default) | shaping (prototype opt-in: Finalize reads "Lock the design") | locked
+    "width": 1280, "height": 800,                 // the desktop frame
+    "journeys": [                                 // walk-throughs that are not choices ("Also in this design")
+      {"id": "find", "title": "Find a job in the table", "summary": "…",
+       "steps": [{"title": "Applications", "screen": "mocks/find-1.html", "do": "Open the Where menu, pick Remote"},
+                 {"title": "Remote, by pay", "screen": "mocks/find-2.html"}]}
+    ],
+    "replies": {"n1x2": "Done: Undo is a button now"}   // your answer to each design note, by note id
+    // prototype opt-in: "prototype": "proto/index.html", "start": "#/", and steps with "route": "#/jobs?scenario=x"
+  },
+
   "diagramSvg": "<rect class='node' …/>…",       // REQUIRED — plan-level architecture/flow diagram
   "diagramViewBox": "0 0 720 240"                // optional
 }
@@ -593,11 +756,11 @@ The deck also sends a global `agentActions` object with every round:
 Notes:
 - All prose fields render **markdown** (bold, italic, `code`, fenced blocks,
   bullet lists, links) — format the plan properly; don't write flat text.
-- Boundary cards (when present), intent cards, and `needs-you` decisions
-  **gate Finalize**; a card is satisfied by a button pick OR free text OR an
-  in-place edit. Open questions also block Finalize (they must be answered in
-  a round first). A boundary answered "Not needed — drop it" is removed from
-  the next round's plan.
+- Intent cards and `needs-you` decisions count as **required** (the Finalize
+  confirm names the ones still open; it never blocks); a card is satisfied by a
+  button pick OR free text OR an in-place edit. Boundaries never count: they
+  firm up as the plan does and can be added late. A struck card is gone from the
+  final plan.
 - `options` reads better than Approve/Reject when the decision is a concrete
   pick between named approaches.
 - The diagram is hand-authored inline SVG (same node/edge classes as before).
@@ -606,8 +769,7 @@ Notes:
 ## Rules
 
 **DO:**
-- Run the same understand → explore → design stages as `/plan`; only the
-  output surface differs.
+- Run every stage in order: context → understand → explore → (design first when the UI matters) → plan → serve.
 - Grill hard in round 1: every real assumption becomes a card; vague answers
   get re-asked sharper, never built on — but scale it to scope, and never
   invent questions to keep the loop alive.
@@ -617,7 +779,8 @@ Notes:
   plan-level diagram; add `boundaries[]` whenever scope needs a fence.
 - Draw, don't describe: per-card diagrams for anything with structure, flow,
   or sequence — and 2–3 clickable wireframe mocks for every UI/layout
-  decision, without being asked.
+  decision, without being asked. When the UI matters, design first: a working
+  prototype the user clicks through (Stage 3a), passing `check_prototype.py`.
 - Honor `agentActions` every round — `reexplore` means re-run the explore
   agents before answering anything.
 - Treat agreed boundaries as binding: if a later round would cross one,
@@ -642,5 +805,6 @@ Notes:
   build and you have no clear default, it's `needs-you`.
 - Add external CDNs/scripts to the deck — it must open offline.
 - Write mock files to disk or send mocks as attachments/links — every visual
-  renders inline in the deck (svg/html options, diagrams), full stop.
+  renders inline in the deck (svg/html options, diagrams). The only files are the
+  design prototype, in the plan's `files/proto/`.
 - Discard or overwrite `answers.json` — it's the user's work.
