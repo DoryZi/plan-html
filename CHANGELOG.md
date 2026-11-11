@@ -9,8 +9,8 @@ options, clickable prototypes), the calmer deck and the new bottom bar. See
 v0.2.0 and v0.2.1 below for the details.
 
 - **Intro video.** A one minute animated intro to the flow: intent,
-  boundaries, design, decisions, finalize, build. Attached to the release in a
-  wide and a tall cut, and linked from the README.
+  boundaries, design, decisions, finalize, build. Attached to the release and
+  linked from the README.
 
 ## v0.2.1 — 2026-11-11
 
