@@ -2,6 +2,8 @@
 
 **See how it will work before your agent spends 12 hours building it.**
 
+**[Install](#install)** · [Try a ready-made plan](#try-it-without-an-agent) · [Demo on YouTube](https://youtu.be/cFwvulWoTE4) · [Why I built it](https://doryzidon.com/blog/stop-approving-plans-you-didnt-read)
+
 ![A 40 second walk through a deck: mock screens, picking an option, answering cards, the progress chip and the themes](docs/img/demo.gif)
 
 plan-html turns your coding agent's plan into a page in your browser. You click
@@ -15,10 +17,48 @@ wrong, all before it writes any code.
 
 ⭐ **If this is useful to you, please star the repo.** It is how other people find it.
 
-## Try it
+## Install
 
-**Just want to look?** Open a ready-made plan. No agent and nothing to install
-beyond Python 3.10:
+In Claude Code:
+
+```text
+/plugin install plan-html --marketplace DoryZi/plan-html
+```
+
+Restart Claude Code, then ask for a plan:
+
+```text
+/plan-html add a dark mode toggle to the settings page
+```
+
+The plan opens in your browser. Needs Python 3.10 or later, nothing else.
+
+<details>
+<summary><b>Codex, Pi, older Claude Code, or a plain clone</b></summary>
+
+**Claude Code before 2.1.275:**
+
+```text
+/plugin marketplace add DoryZi/plan-html
+/plugin install plan-html
+```
+
+**Clone it as a skill.** Each tool finds skills in its own folder:
+
+```bash
+git clone https://github.com/DoryZi/plan-html ~/.claude/skills/plan-html      # Claude Code, every project
+git clone https://github.com/DoryZi/plan-html .claude/skills/plan-html        # Claude Code, this repo only
+git clone https://github.com/DoryZi/plan-html ~/.agents/skills/plan-html      # Codex
+git clone https://github.com/DoryZi/plan-html ~/.pi/agent/skills/plan-html    # Pi
+```
+
+Node is only needed for the lint and test tooling, not to use the skill.
+
+</details>
+
+## Try it without an agent
+
+Open a ready-made plan:
 
 ```bash
 git clone https://github.com/DoryZi/plan-html && cd plan-html
@@ -27,21 +67,6 @@ python3 serve_plan.py --plan examples/mocks/plan.json
 
 It opens in your browser. Click the mock screens, pick an option, answer a few
 cards.
-
-**With your agent.** In Claude Code (2.1.275 or later; older versions use the
-two lines under [Install](#install)):
-
-```text
-/plugin install plan-html --marketplace DoryZi/plan-html
-```
-
-Restart Claude Code, then:
-
-```text
-/plan-html add a dark mode toggle to the settings page
-```
-
-Using Codex or Pi? See [Install](#install).
 
 ## Play with the app before it exists
 
@@ -77,51 +102,8 @@ for.
 - **Works from your phone.** Serve it on your network or through a tunnel.
 - **Nothing to set up.** Plain Python and one offline HTML file. No build step.
 
-▶ [Full demo on YouTube](https://youtu.be/cFwvulWoTE4) · 📖 [Why I built it](https://doryzidon.com/blog/stop-approving-plans-you-didnt-read)
-
-## Install
-
-plan-html is a **Claude Code skill**: install it once and your agent invokes it
-whenever you ask to plan something interactively.
-
-**Option A: plugin marketplace (easiest):**
-
-```text
-/plugin marketplace add DoryZi/plan-html
-/plugin install plan-html
-```
-
-Restart Claude Code, then just ask it to plan a feature. It picks up `/plan-html`
-automatically.
-
-**Option B: clone into your skills directory:**
-
-```bash
-# user-level (available in every project)
-git clone https://github.com/DoryZi/plan-html ~/.claude/skills/plan-html
-
-# or project-level (just this repo)
-git clone https://github.com/DoryZi/plan-html .claude/skills/plan-html
-```
-
-Claude Code auto-discovers any skill under `.claude/skills/`, so `/plan-html`
-is available the next time you start it. No build step and nothing to compile:
-the server is stdlib Python and the deck is a single offline HTML file.
-
-**Option C: Codex or Pi.** Clone into the folder each one reads skills from:
-
-```bash
-git clone https://github.com/DoryZi/plan-html ~/.agents/skills/plan-html      # Codex
-git clone https://github.com/DoryZi/plan-html ~/.pi/agent/skills/plan-html    # Pi
-```
-
-**Requirements:** Python ≥ 3.10. (Node is only needed to run the dev/lint/test
-tooling, not to use the skill.)
-
-> Want to drive the server by hand, without an agent? Skip straight to
-> [Run the server by hand](#run-the-server-by-hand).
-
-## Run the server by hand
+<details>
+<summary><b>Run the server by hand, or from your phone</b></summary>
 
 ```bash
 # serve a plan (no Node needed to run: the deck is a single offline HTML file)
@@ -144,6 +126,8 @@ Live updates use SSE, with an automatic polling fallback for environments that
 buffer event streams (Cloudflare quick-tunnels do this), so the deck stays in
 sync over a tunnel even when the live push can't get through. Pass a fixed
 `--port` when tunnelling so the public URL survives a server restart.
+
+</details>
 
 <details>
 <summary><b>What is in the repo</b></summary>
