@@ -3,16 +3,6 @@ name: plan-html
 description: "Interactive decision-deck planning. Same research/design thinking as /plan, but the plan is an interactive HTML deck the user works through in the browser — intent cards and decision cards, answered with buttons OR free text, with per-card questions to the agent — iterated in rounds until finalized. When the UI matters it designs in the same round: each question shows 2 or 3 options as strips of mock screens built on the real app's look and on earlier cycles, any of which opens full size with notes pinned to elements, and the intents and steps are written for the recommended option and follow the pick; one round is the norm. Works the same in Claude Code, Codex and Pi. Every answer autosaves, so interruptions lose nothing. Use whenever the user wants to plan, review, or iterate on a plan interactively instead of reading markdown in the terminal."
 ---
 
-<!-- experiment-banner:start -->
-> 🧪 **This is an experiment** — part of [**AI Will Replace You**](https://doryzidon.com).
->
-> **Stop wasting time on AI. I run practical experiments — real lessons you can use tomorrow, biweekly.**
->
-> ▶ **[Watch the demo on YouTube](https://youtu.be/cFwvulWoTE4)** · 📖 **[Read the write-up](https://doryzidon.com/blog/stop-approving-plans-you-didnt-read)** · ✉️ **[Subscribe to the newsletter](https://www.linkedin.com/build-relation/newsletter-follow?entityUrn=7453650303100383232)**
->
-> More on [@aiwillreplaceyou](https://youtube.com/@aiwillreplaceyou)
-<!-- experiment-banner:end -->
-
 # Plan (HTML / interactive, round-based)
 
 Research a codebase and design an implementation plan interactively. The
