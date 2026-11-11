@@ -2,6 +2,18 @@
 
 All notable changes to **plan-html** are documented here.
 
+## v0.2.1 — 2026-11-11
+
+### A calmer bottom bar
+- One short hint line above the bar instead of a status that wrapped.
+- A progress chip ("5 of 11 · 6 left") that is also the filter: click it to see
+  only what is left, click again for everything.
+- "Expand all" is a quiet button next to the chip. "Send to agent" is an
+  outline and "Finalize plan" is the one solid button.
+- The theme switch moved to the top right of the page and follows the system's
+  day or night setting until you click it.
+- A short demo video in the README.
+
 ## v0.2.0 — 2026-11-11
 
 ### Design in the deck

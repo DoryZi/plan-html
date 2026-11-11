@@ -21,6 +21,8 @@ your questions live; you reshape the plan in the browser (add/edit/strike cards,
 reorder, ask, grill). The deck is the review surface — not a wall of markdown in
 a terminal.
 
+![A 40 second walk through a deck: mock screens, picking an option, answering cards, the progress chip and the themes](docs/img/demo.gif)
+
 ![Intent cards at the top of the deck](docs/img/intents.png)
 
 | | |

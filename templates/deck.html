@@ -1013,6 +1013,35 @@
     .toc button { min-height:44px; }
     .toc-btn { width:44px; padding:0; }
   }
+  /* the dock: one hint line, then the progress chip (it is the filter), Expand all, the save state and the two actions */
+  .submitbar .status { padding:9px 18px 0; font-size:13px; line-height:1.4; }
+  .submitbar .status:empty { display:none; }
+  .submitbar .inner { padding:10px 14px; }
+  .dock-grow { flex:1 1 auto; }
+  .submitbar .btn.left-toggle { display:inline-flex; align-items:center; gap:8px; border-radius:999px; padding:7px 14px;
+    font-weight:650; white-space:nowrap; }
+  .left-toggle .ring { flex:0 0 auto; width:16px; height:16px; border-radius:50%;
+    background:radial-gradient(closest-side, var(--panel2) 58%, transparent 60%), conic-gradient(var(--ok) var(--pct, 0%), var(--line) 0); }
+  .submitbar .btn.left-toggle.done { opacity:1; cursor:default; border-color:transparent; background:var(--ok-tint); color:var(--ok); }
+  .submitbar #expandAll { background:none; border-color:transparent; color:var(--muted); padding:7px 10px; font-weight:600;
+    white-space:nowrap; }
+  .submitbar #expandAll:hover { color:var(--accent); }
+  .submitbar .live-dot.connected { font-size:0; gap:0; }
+  .submitbar .savestate { white-space:nowrap; }
+  .submitbar #sendRound { background:none; border:1px solid var(--accent); color:var(--accent); }
+  .submitbar .btn.final { background:var(--ok); color:#06220f; }
+  html[data-theme="light"] .submitbar .btn.final { color:#fff; }
+  /* the theme switch sits at the top right of the page, out of the dock */
+  .toprow .theme-btn { order:9; margin-left:auto; width:34px; height:34px; padding:0; font-size:14px; }
+  @media (max-width:760px) {
+    .toprow { gap:6px; }
+    .toprow button { padding:8px 10px; }
+    .toprow .theme-btn { width:44px; height:44px; min-height:44px; padding:0; }
+    .submitbar .status { padding:8px 14px 0; }
+    .submitbar .btn.left-toggle { flex:0 1 auto; padding:7px 12px; font-size:13px; }
+    .submitbar #expandAll { flex:0 0 auto; }
+    .submitbar .savestate.ok { display:none; }
+  }
 </style>
 </head>
 <body>
@@ -1032,7 +1061,7 @@
     <div class="goal-v md" id="goalText"></div>
   </div>
 
-  <div class="toprow" id="topRow"></div>
+  <div class="toprow" id="topRow"><button class="theme-btn" id="themeBtn" type="button" title="Switch between the day and night theme" aria-label="Switch theme">☀️</button></div>
 
   <div id="diagramWrap" style="display:none">
     <h2>🗺️ The shape of it — architecture &amp; flow</h2>
@@ -1207,16 +1236,16 @@
 <nav class="toc" id="toc" aria-label="Sections"></nav>
 
 <div class="submitbar" id="submitbar">
+  <div class="status" id="substatus"></div>
   <div class="inner">
-    <div class="status" id="substatus"></div>
+    <button class="btn secondary left-toggle" id="leftToggle" type="button" aria-pressed="false"
+      title="Click to see only the cards that are left, click again to see them all"></button>
+    <button class="btn secondary" id="expandAll" type="button">Expand all</button>
     <span class="live-dot" id="liveDot">live</span>
     <div class="savestate" id="savestate"></div>
-    <button class="btn secondary theme-btn" id="themeBtn" type="button" title="Toggle light/dark">☀️</button>
+    <span class="dock-grow"></span>
     <button class="btn secondary toc-btn" id="tocBtn" type="button" aria-label="Sections" aria-expanded="false"
       title="What is in this deck">☰</button>
-    <button class="btn secondary left-toggle" id="leftToggle" type="button" aria-pressed="false"
-      title="Hide cards you've already answered so you only see what's left">Show what's left</button>
-    <button class="btn secondary" id="expandAll" type="button">Expand all</button>
     <span id="bulkBtns"></span>
     <button class="btn" id="sendRound" type="button" disabled>Send to agent</button>
     <button class="btn final" id="finalize" type="button" disabled>Finalize plan</button>
@@ -3690,13 +3719,21 @@
       // on click (see ship) summarizing what's being handed off. Open questions
       // and unanswered required cards are surfaced here as a heads-up, not a lock.
       document.getElementById("finalize").disabled = false;
-      document.getElementById("substatus").textContent = questions ? `💬 ${questions} open question${questions > 1 ? "s" : ""} — the agent answers live, or Finalize to let it decide them` : blockers.length ? `🏁 ${blockers.length} required card${blockers.length > 1 ? "s" : ""} still open — answer them, or Finalize to hand them to the agent` : "🏁 All clear — Finalize is the move unless something still nags. Another round is one click away.";
+      document.getElementById("substatus").textContent = questions ? `${questions} open question${questions > 1 ? "s" : ""}. The agent answers live, or Finalize to let it decide them.` : blockers.length ? `${blockers.length} required card${blockers.length > 1 ? "s" : ""} still open. Answer them, or Finalize to hand them to the agent.` : "All clear. Finalize when you are ready.";
       const left = total - answered;
       const toggle = document.getElementById("leftToggle");
       const filtering = document.body.classList.contains("hide-done");
       toggle.classList.toggle("on", filtering);
       toggle.setAttribute("aria-pressed", String(filtering));
-      toggle.textContent = filtering ? `Showing ${left} left · show all` : left ? `Show what's left (${left})` : "Nothing left";
+      // the count is the filter: a ring and "7 of 11 · 4 left", or what the filter is showing
+      const allDone = !filtering && !left;
+      toggle.classList.toggle("done", allDone);
+      toggle.disabled = allDone;
+      const ring = document.createElement("span");
+      ring.className = "ring";
+      ring.style.setProperty("--pct", pct + "%");
+      const label = filtering ? `Showing ${left} left · show all` : left ? `${answered} of ${total} · ${left} left` : `✓ All ${total} answered`;
+      toggle.replaceChildren(...(filtering || allDone ? [] : [ring]), label);
       syncSectionVisibility();
       if (app2.nav) app2.nav.sync();
     };
@@ -4210,8 +4247,8 @@
   } catch (e) {
     console.warn("theme restore failed", e);
   }
-  var hour = (/* @__PURE__ */ new Date()).getHours();
-  applyTheme(savedTheme || (hour >= 7 && hour < 19 ? "light" : "dark"));
+  // no saved choice: follow the system's day or night setting
+  applyTheme(savedTheme || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
   document.getElementById("themeBtn").addEventListener("click", () => {
     const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
     applyTheme(next);

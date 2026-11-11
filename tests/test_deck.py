@@ -108,7 +108,7 @@ def test_an_answered_card_folds_away_and_leaves_whats_left(desktop: Page) -> Non
     classes = card.get_attribute("class").split()
     assert "answered" in classes and "open" not in classes
     assert card.locator(".state").inner_text() == "answered"
-    desktop.get_by_role("button", name=re.compile("Show what's left")).click()
+    desktop.locator("#leftToggle").click()
     assert not card.is_visible()
     _leave(desktop)
     assert card.evaluate("e => getComputedStyle(e).opacity") == "0.62"
@@ -123,12 +123,36 @@ def test_a_click_on_the_middle_of_a_card_head_opens_it(desktop: Page) -> None:
 
 
 def test_whats_left_is_always_in_the_dock(desktop: Page) -> None:
-    """Show what's left sits in the floating dock from the start, before anything is answered."""
-    button = desktop.locator("#submitbar").get_by_role("button", name=re.compile("Show what's left"))
+    """The progress chip sits in the floating dock from the start and is the "what's left" filter."""
+    button = desktop.locator("#submitbar").get_by_role("button", name=re.compile(r"\d+ of \d+ · \d+ left"))
     assert button.is_visible()
     assert button.get_attribute("aria-pressed") == "false"
     button.click()
-    assert desktop.locator("#submitbar").get_by_role("button", name=re.compile("left · show all")).is_visible()
+    shown = desktop.locator("#submitbar").get_by_role("button", name=re.compile("left · show all"))
+    assert shown.is_visible()
+    assert shown.get_attribute("aria-pressed") == "true"
+
+
+@pytest.mark.parametrize("width", [1280, 390])
+def test_the_dock_is_one_hint_line_and_a_row_of_tools(desktop: Page, width: int) -> None:
+    """The dock: a one-line hint, the chip, Expand all, Send and Finalize; the theme switch is at the page top."""
+    desktop.set_viewport_size({"width": width, "height": 844})
+    dock = desktop.locator("#submitbar")
+    hint = desktop.locator("#substatus")
+    assert "—" not in hint.inner_text()
+    if width == 1280:
+        assert hint.bounding_box()["height"] < 34  # one line
+    for button in ("#leftToggle", "#expandAll", "#sendRound", "#finalize"):
+        assert dock.locator(button).is_visible()
+    assert dock.locator("#expandAll").inner_text() == "Expand all"
+    assert dock.locator("#themeBtn").count() == 0
+    theme = desktop.locator("#topRow").get_by_role("button", name="Switch theme")
+    before = desktop.evaluate("document.documentElement.dataset.theme")
+    theme.click()
+    assert desktop.evaluate("document.documentElement.dataset.theme") != before
+    box = dock.bounding_box()
+    assert box["x"] >= 0 and box["x"] + box["width"] <= width
+    assert dock.evaluate("e => e.scrollWidth <= e.clientWidth")
 
 
 def test_a_picked_question_folds_away_and_stays_closed(desktop: Page) -> None:

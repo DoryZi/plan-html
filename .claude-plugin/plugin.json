@@ -1,6 +1,6 @@
 {
   "name": "plan-html",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Stop auto-approving plans! A normal agent plan is a wall of text written for another LLM, not for you — so you scroll, approve, and hope. plan-html makes planning easy because it's built for humans: it lays out the intent it understood, the boundaries it won't cross, the goal, and the verification that proves the work is done — each a card you can read, consume, and decide on. Ask it to plan a visual element and it gives you UI mocks to choose from. Work through it like a conversation until you're aligned. As agents move to loops and longer runtimes, this compounds: everything the agent does next rests on the plan you set in the first thirty seconds.",
   "keywords": [
     "planning",
