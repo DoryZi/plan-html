@@ -21,6 +21,8 @@ your questions live; you reshape the plan in the browser (add/edit/strike cards,
 reorder, ask, grill). The deck is the review surface — not a wall of markdown in
 a terminal.
 
+🎬 **[Watch the one minute intro](https://github.com/DoryZi/plan-html/releases/download/v0.3.0/plan-html-intro.mp4)**: align with your agent before it builds.
+
 ![A 40 second walk through a deck: mock screens, picking an option, answering cards, the progress chip and the themes](docs/img/demo.gif)
 
 ![Intent cards at the top of the deck](docs/img/intents.png)
