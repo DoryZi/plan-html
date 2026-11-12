@@ -71,13 +71,21 @@ python3 serve_plan.py --plan examples/mocks/plan.json
 It opens in your browser. Click the mock screens, pick an option, answer a few
 cards.
 
-## Play with the app before it exists
+## See both sides before it builds
+
+**The front end: play with the app before it exists.** When the UI matters, the
+agent draws 2 or 3 versions as mock screens. Open any of them full size, click
+through it, pin a note to a button, and pick the one you want.
 
 ![A design question in the deck: three options, each shown as a strip of mock screens with Try it and Pick buttons](docs/img/mock-screens.png)
 
-When the UI matters, the agent draws 2 or 3 versions as mock screens. Open any
-of them full size, click through it, pin a note to a button, and pick the one
-you want. You find out it is wrong in a minute, not after the build.
+**The back end: see how it flows.** Every plan opens with a diagram of what
+happens behind the screens, from the first request to the last step.
+
+![The shape of it: a flow diagram of the back end, from the screen through the API to the running agent](docs/img/flow.png)
+
+Screens and flows in one plan, so you check the work end to end. You find out it
+is wrong in a minute, not after the build.
 
 ## What you settle before it builds
 
@@ -96,6 +104,15 @@ you want. You find out it is wrong in a minute, not after the build.
 It is still iterative development. Each round is just a few clicks, and once you
 finalize you can send the agent off on a long build and get back what you asked
 for.
+
+## Why the plan matters
+
+The plan shapes what you get back more than anything else you give the agent.
+
+- **Spec and design in one step.** Two steps of Anthropic's SDLC playbook, done together in one planning tool.
+- **Fewer tokens, better input.** You answer focused questions, so your words go where they count.
+- **Less variance.** A tight plan narrows what the agent can get wrong, even when your CLAUDE.md or AGENTS.md is weak.
+- **Coming next:** verification loops built into the plan.
 
 ## Also in the box
 
