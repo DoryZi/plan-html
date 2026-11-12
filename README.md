@@ -10,6 +10,9 @@ plan-html turns your coding agent's plan into a page in your browser. You click
 through mock screens of the app, answer the open questions and fix what it got
 wrong, all before it writes any code.
 
+Works with **Claude Code**, **Codex**, **Cursor** and **Pi**. Runs on your
+machine, MIT.
+
 > "As Claude takes on more, I'd noticed I was reading plans less closely, and I
 > wanted a way to stay engaged with its choices rather than just hand them off."
 >
@@ -34,7 +37,7 @@ Restart Claude Code, then ask for a plan:
 The plan opens in your browser. Needs Python 3.10 or later, nothing else.
 
 <details>
-<summary><b>Codex, Pi, older Claude Code, or a plain clone</b></summary>
+<summary><b>Codex, Cursor, Pi, older Claude Code, or a plain clone</b></summary>
 
 **Claude Code before 2.1.275:**
 
