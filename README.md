@@ -4,7 +4,7 @@
 
 **[Install](#install)** · [Try a ready-made plan](#try-it-without-an-agent) · [Demo on YouTube](https://youtu.be/cFwvulWoTE4) · [Why I built it](https://doryzidon.com/blog/stop-approving-plans-you-didnt-read)
 
-![A 40 second walk through a deck: mock screens, picking an option, answering cards, the progress chip and the themes](docs/img/demo.gif)
+![A 40 second walk through a small plan: try the mock screens, pick one, answer the cards, see the flow, finalize](docs/img/demo.gif)
 
 plan-html turns your coding agent's plan into a page in your browser. You click
 through mock screens of the app, answer the open questions and fix what it got
@@ -61,11 +61,11 @@ Node is only needed for the lint and test tooling, not to use the skill.
 
 ## Try it without an agent
 
-Open a ready-made plan:
+Open a small ready-made plan (dark mode for a notes app):
 
 ```bash
 git clone https://github.com/DoryZi/plan-html && cd plan-html
-python3 serve_plan.py --plan examples/mocks/plan.json
+python3 serve_plan.py --plan examples/dark-mode/plan.json
 ```
 
 It opens in your browser. Click the mock screens, pick an option, answer a few
@@ -77,13 +77,13 @@ cards.
 agent draws 2 or 3 versions as mock screens. Open any of them full size, click
 through it, pin a note to a button, and pick the one you want.
 
-![A design question in the deck: three options, each shown as a strip of mock screens with Try it and Pick buttons](docs/img/mock-screens.png)
+![A design question in the deck: two ways to add dark mode, each shown as a strip of mock screens with Try it and Pick buttons](docs/img/mock-screens.png)
 
 **The back end: see how it flows.** Every plan opens with a diagram of what
 happens behind the screens, from the first request to the last step. Click a
 box and the card that decides it opens.
 
-![The shape of it: a flow diagram with boxes coloured by kind (screen, API, data, job, agent) and arrows between them](docs/img/flow.png)
+![The shape of it: four boxes from the Settings screen, through saving the choice, to every page reading it](docs/img/flow.png)
 
 Screens and flows in one plan, so you check the work end to end. You find out it
 is wrong in a minute, not after the build.
@@ -97,10 +97,7 @@ is wrong in a minute, not after the build.
 | **Decisions** | The forks in the design. Decide them yourself, or leave any of them to the agent. |
 | **Steps and the finish line** | The workflow it will follow, and the checks that prove the work is done. |
 
-| | |
-|---|---|
-| ![A decision card expanded: options, tradeoffs, and a live chat with the agent](docs/img/decision-expanded.png) | ![The finish line: a verification loop and acceptance-criteria table](docs/img/finish-line.png) |
-| _A decision card: options, tradeoffs, and a chat with the agent inside the card._ | _The finish line: the checks that prove the plan is done._ |
+![Intent, boundary and decision cards, each answered with one click](docs/img/cards.png)
 
 It is still iterative development. Each round is just a few clicks, and once you
 finalize you can send the agent off on a long build and get back what you asked

@@ -1,0 +1,206 @@
+{
+ "title": "Dark mode for Notebook (simple example)",
+ "slug": "dark-mode-example",
+ "task": "Example deck: a small plan with one design question, to try the deck in a minute",
+ "date": "2026-11-11",
+ "round": 1,
+ "rev": 1,
+ "summary": "A small plan to try the deck with. Click a **mock screen** to try it, **Pick** an option, then answer the cards below.",
+ "goal": "People can switch Notebook to dark mode, and it stays that way.",
+ "design": {
+  "state": "open",
+  "width": 1280,
+  "height": 800,
+  "journeys": [],
+  "replies": {}
+ },
+ "discovered": [],
+ "decisions": [
+  {
+   "id": "fork-theme",
+   "title": "Where does the dark mode switch live?",
+   "status": "needs-you",
+   "summary": "Two ways to turn dark mode on. Try both, then pick one.",
+   "building": "A way to switch between light and dark. **Recommended: A**, because it also lets people follow their device. The plan below is written for it; pick B and the intents follow.",
+   "variant": "theme",
+   "variantLabel": "Theme switch",
+   "options": [
+    {
+     "key": "A",
+     "label": "A. In Settings",
+     "caption": "Three choices: Light, Dark or Follow system. Two clicks away.",
+     "steps": [
+      {
+       "title": "A note",
+       "do": "Open Settings",
+       "click": "Settings",
+       "screen": "mocks/theme-a-1.html"
+      },
+      {
+       "title": "Appearance",
+       "do": "Choose Dark",
+       "click": "Dark",
+       "screen": "mocks/theme-a-2.html"
+      },
+      {
+       "title": "Dark, everywhere",
+       "screen": "mocks/theme-a-3.html"
+      }
+     ]
+    },
+    {
+     "key": "B",
+     "label": "B. A button in the top bar",
+     "caption": "One click, always in view. No Follow system choice.",
+     "steps": [
+      {
+       "title": "A note",
+       "do": "Click Dark mode",
+       "click": "Dark mode",
+       "screen": "mocks/theme-b-1.html"
+      },
+      {
+       "title": "Dark in one click",
+       "screen": "mocks/theme-b-2.html"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "fork-save",
+   "title": "Where is the choice saved?",
+   "status": "needs-you",
+   "summary": "On this device only, or on the account so it follows you.",
+   "building": "Where Notebook remembers Light, Dark or Follow system.",
+   "tradeoffs": [
+    "**On the account**: the choice follows you to your phone. Needs one new field and one API call.",
+    "**On this device**: nothing to build on the server. Each device has to be set once."
+   ],
+   "options": [
+    "On the account",
+    "On this device"
+   ]
+  }
+ ],
+ "diagram": {
+  "nodes": [
+   {
+    "id": "settings",
+    "kind": "screen",
+    "title": "Settings",
+    "sub": "Light, Dark, Follow system",
+    "card": "i-switch"
+   },
+   {
+    "id": "save",
+    "kind": "api",
+    "title": "Save the choice",
+    "sub": "PATCH /me/theme",
+    "card": "fork-save"
+   },
+   {
+    "id": "store",
+    "kind": "data",
+    "title": "users.theme",
+    "sub": "one new field",
+    "card": "s-save"
+   },
+   {
+    "id": "pages",
+    "kind": "screen",
+    "title": "Every page",
+    "sub": "reads it on load",
+    "card": "s-colours"
+   }
+  ],
+  "edges": [
+   [
+    "settings",
+    "save"
+   ],
+   [
+    "save",
+    "store"
+   ],
+   [
+    "store",
+    "pages",
+    "on load"
+   ]
+  ]
+ },
+ "intents": [
+  {
+   "id": "i-switch",
+   "title": "Switch to dark, and it stays",
+   "journey": "theme-A",
+   "intent": "I want to choose Dark once and have every page dark, also after I reload or come back tomorrow.",
+   "verify": {
+    "method": "browser test",
+    "command": "pytest -k theme_stays",
+    "expected": "Choose Dark, reload: the page is still dark."
+   }
+  },
+  {
+   "id": "i-system",
+   "title": "Follow my device until I choose",
+   "intent": "I want Notebook to match my device's light or dark setting until I pick one myself.",
+   "verify": {
+    "method": "browser test",
+    "command": "pytest -k theme_follows_system",
+    "expected": "With no choice saved and the device set to dark, the page opens dark."
+   }
+  }
+ ],
+ "boundaries": [
+  {
+   "id": "b-colours",
+   "title": "Only colours change",
+   "boundary": "Dark mode changes colours only. No layout, text or note content changes."
+  }
+ ],
+ "steps": [
+  {
+   "id": "s-colours",
+   "kind": "step",
+   "title": "Colours as theme variables",
+   "intent": "i-switch",
+   "description": "Move the app's colours into one set of variables with a light and a dark value each.",
+   "files": "web/theme.css",
+   "test": "unit"
+  },
+  {
+   "id": "s-picker",
+   "kind": "step",
+   "title": "Appearance in Settings",
+   "intent": "i-switch",
+   "description": "Three choices in Settings: Light, Dark, Follow system. The page changes as soon as one is picked.",
+   "files": "web/settings.html",
+   "test": "browser"
+  },
+  {
+   "id": "s-save",
+   "kind": "step",
+   "title": "Remember the choice",
+   "intent": "i-switch",
+   "description": "Save the choice and read it before the first paint, so there is no flash of the wrong theme.",
+   "files": "api/me.py",
+   "test": "browser"
+  }
+ ],
+ "finalVerify": [
+  {
+   "intent": "i-switch",
+   "method": "browser test",
+   "command": "pytest -k theme_stays",
+   "expected": "Choose Dark, reload: the page is still dark."
+  },
+  {
+   "intent": "i-system",
+   "method": "browser test",
+   "command": "pytest -k theme_follows_system",
+   "expected": "With no choice saved and the device set to dark, the page opens dark."
+  }
+ ]
+}
