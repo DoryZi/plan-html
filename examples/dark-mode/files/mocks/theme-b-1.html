@@ -2,17 +2,22 @@
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Notebook (mock)</title>
-<link rel="stylesheet" href="notes.css">
+<title>Snippets (mock)</title>
+<link rel="stylesheet" href="app.css">
 </head>
 <body>
-<header class="top"><span class="brand"><i></i>Notebook</span><span class="grow"></span><button type="button" class="btn moon">Dark mode</button><span class="me">A</span></header>
-<nav class="side"><h6>Notes</h6><a href="#">Groceries</a><a href="#" class="on">Trip to Lisbon</a><a href="#">Book ideas</a><span class="gap"></span><a href="#">Settings</a></nav>
+<header class="top"><span class="brand"><i></i>Snippets</span><span class="grow"></span><button type="button" class="btn moon">Dark mode</button><span class="me">A</span></header>
+<nav class="side"><h6>Snippets</h6><a href="#">Auth middleware</a><a href="#" class="on">Retry with backoff</a><a href="#">Parse CSV rows</a><span class="gap"></span><a href="#">Settings</a></nav>
 <main>
-<h1>Trip to Lisbon</h1>
-<p class="sub">Edited yesterday</p>
-<div class="note"><p>Book the tram tour for Saturday morning. Ask the hotel about a late checkout.</p>
-<p>Pack light: two shirts, the good shoes, a charger. Leave room for pastries.</p></div>
+<h1>Retry with backoff</h1>
+<p class="sub">JavaScript, edited yesterday</p>
+<pre class="code"><span class="k">async function</span> <span class="f">retry</span>(fn, tries = <span class="n">3</span>) {
+  <span class="k">for</span> (<span class="k">let</span> i = <span class="n">0</span>; i &lt; tries; i++) {
+    <span class="k">try</span> { <span class="k">return await</span> fn(); }
+    <span class="k">catch</span> (err) { <span class="k">await</span> <span class="f">sleep</span>(<span class="n">200</span> * <span class="n">2</span> ** i); }
+  }
+  <span class="k">throw new</span> <span class="f">Error</span>(<span class="s">"gave up"</span>);
+}</pre>
 </main>
 <script src="proto-kit.js"></script>
 </body></html>

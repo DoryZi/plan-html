@@ -1,12 +1,12 @@
 {
- "title": "Dark mode for Notebook (simple example)",
+ "title": "Dark mode for Snippets (simple example)",
  "slug": "dark-mode-example",
  "task": "Example deck: a small plan with one design question, to try the deck in a minute",
  "date": "2026-11-11",
  "round": 1,
  "rev": 1,
  "summary": "A small plan to try the deck with. Click a **mock screen** to try it, **Pick** an option, then answer the cards below.",
- "goal": "People can switch Notebook to dark mode, and it stays that way.",
+ "goal": "People can switch Snippets to dark mode, and it stays that way.",
  "design": {
   "state": "open",
   "width": 1280,
@@ -31,7 +31,7 @@
      "caption": "Three choices: Light, Dark or Follow system. Two clicks away.",
      "steps": [
       {
-       "title": "A note",
+       "title": "A snippet",
        "do": "Open Settings",
        "click": "Settings",
        "screen": "mocks/theme-a-1.html"
@@ -54,7 +54,7 @@
      "caption": "One click, always in view. No Follow system choice.",
      "steps": [
       {
-       "title": "A note",
+       "title": "A snippet",
        "do": "Click Dark mode",
        "click": "Dark mode",
        "screen": "mocks/theme-b-1.html"
@@ -72,7 +72,7 @@
    "title": "Where is the choice saved?",
    "status": "needs-you",
    "summary": "On this device only, or on the account so it follows you.",
-   "building": "Where Notebook remembers Light, Dark or Follow system.",
+   "building": "Where Snippets remembers Light, Dark or Follow system.",
    "tradeoffs": [
     "**On the account**: the choice follows you to your phone. Needs one new field and one API call.",
     "**On this device**: nothing to build on the server. Each device has to be set once."
@@ -145,7 +145,7 @@
   {
    "id": "i-system",
    "title": "Follow my device until I choose",
-   "intent": "I want Notebook to match my device's light or dark setting until I pick one myself.",
+   "intent": "I want Snippets to match my device's light or dark setting until I pick one myself.",
    "verify": {
     "method": "browser test",
     "command": "pytest -k theme_follows_system",
@@ -157,7 +157,7 @@
   {
    "id": "b-colours",
    "title": "Only colours change",
-   "boundary": "Dark mode changes colours only. No layout, text or note content changes."
+   "boundary": "Dark mode changes colours only. No layout, text or code changes."
   }
  ],
  "steps": [

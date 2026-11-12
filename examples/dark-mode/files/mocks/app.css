@@ -1,6 +1,6 @@
-/* A small made-up notes app, for the dark mode example plan. */
-:root { --bg:#f6f7fb; --panel:#ffffff; --ink:#1b2033; --muted:#6b7390; --line:#e3e6f0; --accent:#4f6df5; --soft:#eef1fe; }
-.dark { --bg:#0f1220; --panel:#181c2e; --ink:#eef0f8; --muted:#98a1bd; --line:#2a3050; --accent:#8ea2ff; --soft:#232a49; }
+/* A small made-up code snippets app, for the dark mode example plan. */
+:root { --bg:#f6f7fb; --panel:#ffffff; --ink:#1b2033; --muted:#6b7390; --line:#e3e6f0; --accent:#4f6df5; --soft:#eef1fe; --code:#f1f3fa; --k:#7c3aed; --f:#1d4ed8; --s:#15803d; --n:#b45309; }
+.dark { --bg:#0f1220; --panel:#181c2e; --ink:#eef0f8; --muted:#98a1bd; --line:#2a3050; --accent:#8ea2ff; --soft:#232a49; --code:#0b0e1a; --k:#c4a5ff; --f:#8ea2ff; --s:#86e0a3; --n:#f5c06a; }
 * { box-sizing:border-box; }
 html, body { margin:0; height:100%; }
 body { background:var(--bg); color:var(--ink); font:16px/1.5 "Inter","Segoe UI",system-ui,sans-serif; display:grid;
@@ -18,7 +18,8 @@ body { background:var(--bg); color:var(--ink); font:16px/1.5 "Inter","Segoe UI",
 main { padding:40px 56px; overflow:hidden; }
 h1 { margin:0 0 6px; font-size:30px; letter-spacing:-.02em; }
 .sub { color:var(--muted); margin:0 0 26px; }
-.note p { max-width:62ch; font-size:17px; margin:0 0 14px; }
+.code { margin:0; max-width:760px; background:var(--code); border:1px solid var(--line); border-radius:14px; padding:22px 26px; font:16px/1.7 "JetBrains Mono","SF Mono",ui-monospace,Menlo,Consolas,monospace; overflow:hidden; }
+.code .k { color:var(--k); } .code .f { color:var(--f); } .code .s { color:var(--s); } .code .n { color:var(--n); }
 .btn { font:inherit; font-weight:650; border:1px solid var(--line); background:var(--panel); color:var(--ink); border-radius:999px; padding:9px 18px; cursor:pointer; }
 .btn.moon { border-color:var(--accent); color:var(--accent); }
 .pick { display:grid; grid-template-columns:repeat(3, 220px); gap:18px; }

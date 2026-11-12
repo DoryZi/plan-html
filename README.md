@@ -61,7 +61,7 @@ Node is only needed for the lint and test tooling, not to use the skill.
 
 ## Try it without an agent
 
-Open a small ready-made plan (dark mode for a notes app):
+Open a small ready-made plan (dark mode for a code snippets app):
 
 ```bash
 git clone https://github.com/DoryZi/plan-html && cd plan-html

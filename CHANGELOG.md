@@ -11,7 +11,7 @@ All notable changes to **plan-html** are documented here.
   see what it connects to; click a box that names a card and that card opens.
   A hand-drawn `diagramSvg` still renders.
 - **A small example plan.** `examples/dark-mode` plans dark mode for a small
-  notes app: one design question with two options as mock screens, two
+  code snippets app: one design question with two options as mock screens, two
   intents, a boundary and a decision. The README's pictures and its "try it
   without an agent" command use it.
 
