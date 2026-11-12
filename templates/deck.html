@@ -817,6 +817,36 @@
 
   /* calmer surfaces: one tint instead of a gradient per box */
   .diagram { background:var(--tint); border-color:var(--tint-line); }
+
+  /* flow kit: a diagram drawn by the deck from plan data (nodes and edges). The kind of a node picks its colour. */
+  html { --fk-screen:#2dd4bf; --fk-api:#6ea8ff; --fk-data:#fbbf24; --fk-job:#b79bff; --fk-agent:#fb7185;
+    --fk-user:#f0abfc; --fk-external:#a8b3cc; --fk-step:#8fa3c8; --fk-edge:#8fa0c8; }
+  html[data-theme="light"] { --fk-screen:#0f9f8d; --fk-api:#2563eb; --fk-data:#b7791f; --fk-job:#7c3aed;
+    --fk-agent:#e11d48; --fk-user:#c026d3; --fk-external:#5b678a; --fk-step:#51618f; --fk-edge:#7584ab; }
+  .diagram.fk { overflow-x:auto; justify-content:flex-start; max-width:100%; min-width:0; box-sizing:border-box; }
+  .blk:has(> .diagram.fk) { align-self:stretch; min-width:0; max-width:100%; }
+  .diagram.fk svg { margin:0 auto; height:auto; flex:none; }
+  .fk-node { --c:var(--fk-step); outline:none; }
+  .fk-node.fk-screen { --c:var(--fk-screen); } .fk-node.fk-api { --c:var(--fk-api); } .fk-node.fk-data { --c:var(--fk-data); }
+  .fk-node.fk-job { --c:var(--fk-job); } .fk-node.fk-agent { --c:var(--fk-agent); } .fk-node.fk-user { --c:var(--fk-user); }
+  .fk-node.fk-external { --c:var(--fk-external); }
+  .fk-node rect { fill:color-mix(in srgb, var(--c) 14%, var(--panel)); stroke:var(--c); stroke-width:1.6; transition:fill .15s, stroke-width .15s; }
+  .fk-node.fk-hot rect, .fk-node:focus-visible rect { fill:color-mix(in srgb, var(--c) 28%, var(--panel)); stroke-width:3; }
+  .fk-node[data-card] { cursor:pointer; }
+  .fk-node.fk-dim, .fk-edge.fk-dim, .fk-elabel.fk-dim { opacity:.3; }
+  .fk-lbl { height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;
+    padding:5px 11px; gap:2px; font-family:"Inter","Segoe UI",system-ui,sans-serif; color:var(--ink); }
+  .fk-lbl span { display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
+  .fk-tag { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--c); -webkit-line-clamp:1; }
+  .fk-t { font-size:15px; font-weight:650; line-height:1.2; -webkit-line-clamp:2; }
+  .fk-s { font-size:12px; line-height:1.25; color:var(--muted); -webkit-line-clamp:2; }
+  .fk-edge { fill:none; stroke:var(--fk-edge); stroke-width:2; stroke-dasharray:7 7; animation:fk-flow 1.1s linear infinite; }
+  .fk-edge.fk-hot { stroke:var(--ink); stroke-width:2.6; }
+  .fk-arrow { fill:var(--fk-edge); }
+  .fk-elabel rect { fill:var(--panel); stroke:var(--line); }
+  .fk-elabel text { fill:var(--muted); font:600 12px "Inter","Segoe UI",system-ui,sans-serif; text-anchor:middle; }
+  @keyframes fk-flow { to { stroke-dashoffset:-14; } }
+  @media (prefers-reduced-motion: reduce) { .fk-edge { animation:none; } }
   .mocks-lead { background:var(--tint); border-color:var(--tint-line); }
   .tradeoffs li { background:var(--tint); border-color:transparent; }
   .md li { background:var(--tint); }
@@ -1523,9 +1553,162 @@
       container.title = "Click to enlarge";
       container.addEventListener("click", () => openLightbox2(title, (c) => {
         c.innerHTML = container.innerHTML;
+        // a flow kit diagram: drop the hover state it was copied with, and show it at its full size
+        c.querySelectorAll(".fk-dim, .fk-hot").forEach((e) => e.classList.remove("fk-dim", "fk-hot"));
+        const kit = c.querySelector("svg[data-fk-w]");
+        if (kit) kit.style.cssText = `width:${kit.dataset.fkW}px;max-width:100%;height:auto;display:block;margin:0 auto`;
       }));
     };
     return { openLightbox: openLightbox2, zoomableDiagram: zoomableDiagram2 };
+  };
+
+  // flow kit: draw a diagram from plan data, {nodes:[{id,kind,title,sub,col,row,card}], edges:[[from,to,label]]}.
+  // The deck places the boxes on a grid, fits the text and draws the arrows, so the agent writes no coordinates.
+  var FK = { W: 196, H: 92, GX: 52, GY: 84, P: 28, PER_ROW: 5,
+    KINDS: { screen: "Screen", api: "API", data: "Data", job: "Job", agent: "Agent", user: "User", external: "External" } };
+  var fkEsc = (v) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  var flowKitSvg = (dg, rawUid) => {
+    const { W, H, GX, GY, P, PER_ROW, KINDS } = FK;
+    const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+    const nodes = (dg.nodes || []).filter((n) => n && typeof n === "object" && n.id != null);
+    const uid = String(rawUid).replace(/[^\w-]/g, "_");
+    const placed = nodes.every((n) => n.col > 0 && n.row > 0);
+    const pos = Object.create(null);
+    nodes.forEach((n, i) => {
+      const col = placed ? Math.round(n.col) : (i % PER_ROW) + 1;
+      const row = placed ? Math.round(n.row) : Math.floor(i / PER_ROW) + 1;
+      pos[n.id] = { col, row, x: P + (col - 1) * (W + GX), y: P + (row - 1) * (H + GY) };
+    });
+    const cols = Math.max(1, ...nodes.map((n) => pos[n.id].col));
+    const rows = Math.max(1, ...nodes.map((n) => pos[n.id].row));
+    const vw = P * 2 + cols * W + (cols - 1) * GX;
+    const vh = P * 2 + rows * H + (rows - 1) * GY;
+    const R = 14;
+    let edges = "";
+    let labels = "";
+    const lanes = Object.create(null);
+    let top = 0;      // an arrow over the first row needs room above it
+    let right = vw;   // an arrow around the last column needs room beside it
+    (dg.edges || []).filter((e) => e && typeof e === "object").forEach((e) => {
+      const [a, b, rawLabel] = Array.isArray(e) ? e : [e.from, e.to, e.label];
+      const label = rawLabel && String(rawLabel).length > 30 ? String(rawLabel).slice(0, 29) + "…" : rawLabel;
+      const A = pos[a];
+      const B = pos[b];
+      if (!A || !B || a === b) return;
+      let d;
+      let lx;
+      let ly;
+      if (A.row === B.row && Math.abs(A.col - B.col) === 1) {
+        // neighbours in a row: a straight arrow across the gap
+        const fwd = B.col > A.col;
+        const x1 = fwd ? A.x + W : A.x;
+        const x2 = fwd ? B.x - 3 : B.x + W + 3;
+        d = `M${x1} ${A.y + H / 2} H${x2}`;
+        lx = (x1 + x2) / 2;
+        ly = A.y + H / 2 - 14;
+      } else if (A.col === B.col && Math.abs(A.row - B.row) > 1) {
+        // same column with boxes in between: go around them on the right
+        const k = lanes[`side-${A.col}`] = (lanes[`side-${A.col}`] || 0) + 1;
+        const x0 = A.x + W;
+        const xs = x0 + 10 + k * 14;
+        const y1 = A.y + H / 2;
+        const y2 = B.y + H / 2;
+        const v = y2 > y1 ? 1 : -1;
+        d = `M${x0} ${y1} H${xs - R} Q${xs} ${y1} ${xs} ${y1 + v * R} V${y2 - v * R} Q${xs} ${y2} ${xs - R} ${y2} H${x0 + 3}`;
+        lx = xs;
+        ly = (y1 + y2) / 2;
+        right = Math.max(right, xs + 16 + (label ? String(label).length * 3.4 + 11 : 0));
+      } else if (A.col === B.col) {
+        // same column, next row: straight down or up
+        const down = B.row > A.row;
+        const y1 = down ? A.y + H : A.y;
+        const y2 = down ? B.y - 3 : B.y + H + 3;
+        d = `M${A.x + W / 2} ${y1} V${y2}`;
+        lx = A.x + W / 2;
+        ly = y1 + (y2 - y1) * 0.3;  // near its start, clear of arrows that run along the middle of the gap
+      } else {
+        // anything else: leave through the top or bottom, run along a gap between rows, and enter the target
+        const sx = A.x + W / 2;
+        const tx = B.x + W / 2;
+        const dir = tx < sx ? -1 : 1;
+        const sameRow = A.row === B.row;
+        const down = B.row > A.row;
+        const sy = sameRow || !down ? A.y : A.y + H;
+        // arrows that share a gap run on their own lane, so lines and labels do not sit on each other
+        const gap = sameRow ? `over-${A.row}` : `gap-${down ? A.row : A.row - 1}`;
+        const k = lanes[gap] = (lanes[gap] || 0) + 1;
+        const lane = k === 1 ? 0 : (k % 2 ? 1 : -1) * Math.ceil((k - 1) / 2) * 15;
+        const my = (sameRow ? A.y - 20 : down ? A.y + H + GY / 2 : A.y - GY / 2) + (sameRow ? -Math.abs(lane) : lane);
+        const ty = sameRow || down ? B.y - 3 : B.y + H + 3;
+        const v1 = my < sy ? -1 : 1;
+        const v2 = ty < my ? -1 : 1;
+        d = `M${sx} ${sy} V${my - v1 * R} Q${sx} ${my} ${sx + dir * R} ${my} H${tx - dir * R} Q${tx} ${my} ${tx} ${my + v2 * R} V${ty}`;
+        lx = sx + (tx - sx) * (k === 1 ? 0.5 : k % 2 ? 0.28 : 0.72);
+        ly = my;
+        top = Math.min(top, my - 16);
+      }
+      edges += `<path class="fk-edge" data-a="${fkEsc(a)}" data-b="${fkEsc(b)}" d="${d}" marker-end="url(#fk-arr-${uid})"/>`;
+      if (label) {
+        const w = String(label).length * 6.8 + 22;
+        labels += `<g class="fk-elabel" data-a="${fkEsc(a)}" data-b="${fkEsc(b)}"><rect x="${lx - w / 2}" y="${ly - 12}" width="${w}" height="24" rx="12"/>`
+          + `<text x="${lx}" y="${ly + 4}">${fkEsc(label)}</text></g>`;
+      }
+    });
+    const boxes = nodes.map((n) => {
+      const { x, y } = pos[n.id];
+      const kind = typeof n.kind === "string" && own(KINDS, n.kind) ? n.kind : "";
+      const tag = kind ? KINDS[kind] : n.kind || "";
+      return `<g class="fk-node${kind ? " fk-" + kind : ""}" data-n="${fkEsc(n.id)}"${n.card ? ` data-card="${fkEsc(n.card)}" tabindex="0" role="link"` : ""}>`
+        + `<rect x="${x}" y="${y}" width="${W}" height="${H}" rx="14"/>`
+        + `<foreignObject x="${x}" y="${y}" width="${W}" height="${H}"><div class="fk-lbl">`
+        + (tag ? `<span class="fk-tag">${fkEsc(tag)}</span>` : "")
+        + `<span class="fk-t">${fkEsc(n.title || n.id)}</span>`
+        + (n.sub ? `<span class="fk-s">${fkEsc(n.sub)}</span>` : "")
+        + `</div></foreignObject></g>`;
+    }).join("");
+    return `<svg viewBox="0 ${top} ${right} ${vh - top}" data-fk-w="${Math.round(right)}" style="width:100%;max-width:${right}px;min-width:${Math.min(right, 720)}px" role="img" aria-label="flow diagram">`
+      + `<defs><marker id="fk-arr-${uid}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">`
+      + `<path class="fk-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs>${edges}${boxes}${labels}</svg>`;
+  };
+  var flowKit = (container, dg, uid) => {
+    container.classList.add("fk");
+    container.innerHTML = flowKitSvg(dg, uid);
+    // hover or focus a box: it and what it connects to stay bright, the rest dims
+    const light = (id) => {
+      const near = new Set([id]);
+      container.querySelectorAll(".fk-edge, .fk-elabel").forEach((e) => {
+        const hit = id != null && (e.dataset.a === id || e.dataset.b === id);
+        if (hit) { near.add(e.dataset.a); near.add(e.dataset.b); }
+        e.classList.toggle("fk-hot", hit && e.classList.contains("fk-edge"));
+        e.classList.toggle("fk-dim", id != null && !hit);
+      });
+      container.querySelectorAll(".fk-node").forEach((n) => {
+        n.classList.toggle("fk-hot", n.dataset.n === id);
+        n.classList.toggle("fk-dim", id != null && !near.has(n.dataset.n));
+      });
+    };
+    const nodeOf = (e) => (e.target.closest ? e.target.closest(".fk-node") : null);
+    container.addEventListener("mouseover", (e) => { const n = nodeOf(e); light(n ? n.dataset.n : null); });
+    container.addEventListener("mouseleave", () => light(null));
+    container.addEventListener("focusin", (e) => { const n = nodeOf(e); light(n ? n.dataset.n : null); });
+    container.addEventListener("focusout", () => light(null));
+    // a box that names a card opens that card (a click anywhere else still enlarges the diagram)
+    const jump = (e) => {
+      const n = nodeOf(e);
+      if (!n || !n.dataset.card) return;
+      const target = document.querySelector(`.card[data-id="${CSS.escape(n.dataset.card)}"]`);
+      if (!target) return;
+      e.stopPropagation();
+      e.preventDefault();
+      const sec = target.closest(".sec");
+      const head = sec && sec.classList.contains("sec-closed") ? sec.querySelector("h2") : null;
+      if (head) head.click();
+      target.classList.add("open");
+      if (target.offsetParent === null && document.body.classList.contains("hide-done")) document.getElementById("leftToggle").click();
+      target.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    };
+    container.addEventListener("click", (e) => { light(null); jump(e); }, true);
+    container.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") jump(e); });
   };
 </script>
 <script>
@@ -2864,7 +3047,15 @@
       b.appendChild(v);
       body.appendChild(b);
     }
-    if (d.diagramSvg) {
+    if (d.diagram && (d.diagram.nodes || []).length) {
+      const b = el2("div", "blk");
+      b.appendChild(el2("div", "lbl", "Diagram"));
+      const dv = el2("div", "diagram");
+      flowKit(dv, d.diagram, d.id);
+      zoomableDiagram2(dv, d.title || "Diagram");
+      b.appendChild(dv);
+      body.appendChild(b);
+    } else if (d.diagramSvg) {
       const b = el2("div", "blk");
       b.appendChild(el2("div", "lbl", "Diagram"));
       const dv = el2("div", "diagram");
@@ -3438,8 +3629,15 @@
         });
         bulk.appendChild(btn);
       });
-      document.getElementById("diagramWrap").style.display = PLAN2.diagramSvg ? "" : "none";
-      if (PLAN2.diagramSvg) {
+      const kitDiagram = PLAN2.diagram && (PLAN2.diagram.nodes || []).length ? PLAN2.diagram : null;
+      document.getElementById("diagramWrap").style.display = kitDiagram || PLAN2.diagramSvg ? "" : "none";
+      if (kitDiagram) {
+        const old = document.getElementById("diagram");
+        const dg = old.cloneNode(false);  // a fresh box: a redraw must not stack listeners
+        old.replaceWith(dg);
+        flowKit(dg, kitDiagram, "plan");
+        zoomableDiagram2(dg, "Architecture & flow");
+      } else if (PLAN2.diagramSvg) {
         const dg = document.getElementById("diagram");
         dg.innerHTML = `<svg viewBox="${PLAN2.diagramViewBox || "0 0 720 240"}" role="img" aria-label="plan diagram">
          <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7"

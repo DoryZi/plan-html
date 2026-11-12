@@ -2,6 +2,15 @@
 
 All notable changes to **plan-html** are documented here.
 
+## Unreleased
+
+- **Flow diagrams drawn by the deck.** A plan now gives its diagram as boxes
+  and arrows (`diagram: { nodes, edges }`) with no coordinates. The deck
+  places the boxes, fits the text, colours each box by kind (screen, API,
+  data, job, agent, user, external) and draws moving arrows. Hover a box to
+  see what it connects to; click a box that names a card and that card opens.
+  A hand-drawn `diagramSvg` still renders.
+
 ## v0.3.0 — 2026-11-11
 
 Rolls up today's work into one release: design in the deck (mock screens as

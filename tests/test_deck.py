@@ -504,3 +504,130 @@ def test_an_agent_reply_on_an_open_card_shows_without_a_click(desktop: Page) -> 
     card.locator(".card-title").click()
     assert card.locator(".thread .who.agent").is_visible()
     assert card.get_by_role("button", name="💬 Ask the agent (2)").get_attribute("aria-expanded") == "true"
+
+
+_SPILLS = """() => [...document.querySelectorAll('#diagram .fk-lbl')].filter(
+    (d) => d.scrollHeight > d.clientHeight + 1 || d.scrollWidth > d.clientWidth + 1).length"""
+
+
+def test_the_plan_diagram_is_drawn_from_its_boxes_and_arrows(mocks: tuple[Page, Path]) -> None:
+    """The plan's diagram comes as boxes and arrows with no coordinates: the deck draws every box, the text fits, and
+    a box that names a card opens that card instead of enlarging the diagram."""
+    page, _ = mocks
+    page.locator("#diagramWrap .sec-toggle").click()
+    boxes = page.locator("#diagram .fk-node")
+    assert boxes.count() == 4 and page.locator("#diagram .fk-edge").count() == 3
+    assert page.evaluate(_SPILLS) == 0
+    step = page.locator('.card[data-id="s-match"]')
+    assert not step.is_visible()
+    boxes.nth(1).click()
+    page.wait_for_timeout(700)
+    assert step.is_visible() and "open" in step.get_attribute("class").split()
+    assert "show" not in (page.locator("#lightbox").get_attribute("class") or "").split()
+
+
+def test_long_words_and_arrows_that_share_a_gap_stay_tidy(desktop: Page) -> None:
+    """Text too long for a box is cut inside it, boxes without a place are laid out in rows, and two arrows that
+    run through the same gap get their own lane, so their labels do not sit on each other."""
+    desktop.evaluate("""() => {
+        const n = (id, col, row, title) => ({ id, col, row, kind: "api", title, sub: "a second line with far more words than two lines of a box can hold, by a wide margin" });
+        app.store.plan.diagram = { nodes: [
+            n("a", 1, 1, "A very long title that would never fit in one box however hard it tried to"),
+            n("b", 2, 1, "B"), n("c", 3, 1, "C"), n("d", 1, 2, "D"), n("e", 2, 2, "E"), n("f", 3, 2, "F")],
+          edges: [["a", "b"], ["c", "d", "first label"], ["a", "f", "second label"], ["a", "c", "over the top"]] };
+        app.renderSections();
+    }""")
+    desktop.locator("#diagramWrap .sec-toggle").click()
+    assert desktop.locator("#diagram .fk-node").count() == 6
+    assert desktop.evaluate(_SPILLS) == 0
+    overlaps = desktop.evaluate("""() => {
+        const r = [...document.querySelectorAll('#diagram .fk-elabel')].map((g) => g.getBoundingClientRect());
+        let hits = 0;
+        r.forEach((a, i) => r.slice(i + 1).forEach((b) => {
+            if (a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom) hits += 1;
+        }));
+        return [r.length, hits];
+    }""")
+    assert overlaps == [3, 0]
+    desktop.evaluate("""() => {
+        app.store.plan.diagram = { nodes: [1, 2, 3, 4, 5, 6, 7].map((i) => ({ id: "n" + i, title: "Step " + i })),
+          edges: [["n1", "n2"], ["n5", "n6"]] };
+        app.renderSections();
+    }""")
+    ys = desktop.evaluate("() => [...document.querySelectorAll('#diagram .fk-node rect')].map((r) => +r.getAttribute('y'))")
+    assert len(ys) == 7 and len(set(ys)) == 2 and ys[0] == ys[4] and ys[5] == ys[6] > ys[0]
+
+
+def test_a_hand_drawn_diagram_still_shows(desktop: Page) -> None:
+    """A plan written before the flow kit carries its diagram as SVG: it is drawn as before."""
+    desktop.evaluate("""() => {
+        delete app.store.plan.diagram;
+        app.store.plan.diagramSvg = "<rect class='node' x='20' y='20' width='140' height='48'/>";
+        app.renderSections();
+    }""")
+    desktop.locator("#diagramWrap .sec-toggle").click()
+    assert desktop.locator("#diagram rect.node").count() == 1 and desktop.locator("#diagram .fk-node").count() == 0
+
+
+_TWO_LANES = """{ nodes: [
+    { id: "a", kind: "screen", col: 1, row: 1, title: "Screen" }, { id: "b", kind: "api", col: 2, row: 1, title: "API" },
+    { id: "c", kind: "data", col: 3, row: 1, title: "Store" }, { id: "d", kind: "job", col: 4, row: 1, title: "Job" },
+    { id: "e", kind: "agent", col: 5, row: 1, title: "Agent" }],
+  edges: [["a", "b"], ["b", "c"], ["c", "d"], ["d", "e"]] }"""
+
+
+def test_a_card_diagram_scrolls_inside_a_phone_card(phone: Page) -> None:
+    """On a phone a wide diagram in a card with screens stays inside the card and scrolls sideways there (it used to
+    widen the card's content past the card's edge, where it was cut off and out of reach)."""
+    phone.evaluate("() => { app.store.plan.intents[0].diagram = %s; app.renderSections(); }" % _TWO_LANES)
+    card = phone.locator('.card[data-id="i-find"]')
+    card.locator(".card-title").click()
+    box = card.locator(".diagram.fk")
+    box.scroll_into_view_if_needed()
+    inside, scrolls, page_wide = phone.evaluate("""() => {
+        const card = document.querySelector('.card[data-id="i-find"]'), d = card.querySelector('.diagram.fk');
+        return [d.getBoundingClientRect().right <= card.getBoundingClientRect().right + 1, d.scrollWidth > d.clientWidth,
+                document.documentElement.scrollWidth > innerWidth + 1];
+    }""")
+    assert inside and scrolls and not page_wide
+
+
+def test_the_enlarged_diagram_is_clean_and_full_size(desktop: Page) -> None:
+    """A click on a box that opens no card enlarges the diagram: the copy carries no dimmed boxes from the hover and
+    is at least as large as the diagram on the page."""
+    desktop.evaluate("() => { app.store.plan.diagram = %s; app.renderSections(); }" % _TWO_LANES)
+    desktop.locator("#diagramWrap .sec-toggle").click()
+    inline = desktop.locator("#diagram svg").bounding_box()["width"]
+    desktop.locator("#diagram .fk-node").nth(2).hover()
+    assert desktop.locator("#diagram .fk-dim").count() > 0
+    desktop.locator("#diagram .fk-node").nth(2).click()
+    assert "show" in desktop.locator("#lightbox").get_attribute("class").split()
+    assert desktop.locator("#lbContent .fk-node").count() == 5 and desktop.locator("#lbContent .fk-dim").count() == 0
+    assert desktop.locator("#lbContent svg").bounding_box()["width"] >= inline - 1
+
+
+def test_awkward_diagrams_stay_inside_the_frame(desktop: Page) -> None:
+    """Arrows over the first row and labels stay inside the drawing, an arrow down a column goes around the box in
+    between, and a broken arrow or an odd kind name does not stop the deck."""
+    desktop.evaluate("""() => {
+        const n = (id, col, row, kind) => ({ id, col, row, kind, title: id });
+        app.store.plan.diagram = { nodes: [n("a", 1, 1, "api"), n("b", 2, 1, "constructor"), n("c", 3, 1), n("d", 1, 2), n("e", 1, 3)],
+          edges: [["a", "c", "skips one"], ["c", "a", "and back, with a label that is far too long to fit anywhere"], ["a", "e", "around"],
+                  null, 7, ["a", "toString"], ["constructor", "a"]] };
+        app.renderSections();
+    }""")
+    desktop.locator("#diagramWrap .sec-toggle").click()
+    assert desktop.locator("#diagram .fk-node").count() == 5 and desktop.locator("#diagram .fk-edge").count() == 3
+    assert desktop.locator("#diagram .fk-node").nth(1).locator(".fk-tag").inner_text().lower() == "constructor"
+    out, around, longest = desktop.evaluate("""() => {
+        const svg = document.querySelector('#diagram svg'), f = svg.getBoundingClientRect();
+        const out = [...svg.querySelectorAll('.fk-elabel rect, .fk-edge')].filter((e) => {
+            const r = e.getBoundingClientRect();
+            return r.top < f.top - 1 || r.bottom > f.bottom + 1 || r.left < f.left - 1 || r.right > f.right + 1;
+        }).length;
+        const mid = svg.querySelector('.fk-node[data-n="d"] rect').getBoundingClientRect();
+        const side = svg.querySelector('.fk-edge[data-a="a"][data-b="e"]').getBoundingClientRect();
+        const longest = Math.max(...[...svg.querySelectorAll('.fk-elabel text')].map((t) => t.textContent.length));
+        return [out, side.right > mid.right, longest];
+    }""")
+    assert out == 0 and around and longest <= 30

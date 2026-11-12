@@ -178,8 +178,52 @@
    ]
   }
  ],
- "diagramViewBox": "0 0 700 120",
- "diagramSvg": "<rect class='node alt1' x='20' y='36' width='140' height='48' rx='10'/><text class='node-label' x='90' y='58' text-anchor='middle'>Email arrives</text><text class='node-sub' x='90' y='74' text-anchor='middle'>or found missing</text><line class='edge' x1='160' y1='60' x2='220' y2='60' marker-end='url(#arrow)'/><rect class='node' x='220' y='36' width='140' height='48' rx='10'/><text class='node-label' x='290' y='58' text-anchor='middle'>Match</text><text class='node-sub' x='290' y='74' text-anchor='middle'>sure or unsure</text><line class='edge' x1='360' y1='60' x2='420' y2='60' marker-end='url(#arrow)'/><rect class='node alt2' x='420' y='36' width='140' height='48' rx='10'/><text class='node-label' x='490' y='58' text-anchor='middle'>Link or ask</text><text class='node-sub' x='490' y='74' text-anchor='middle'>A, B or C</text><line class='edge' x1='560' y1='60' x2='600' y2='60' marker-end='url(#arrow)'/><rect class='node alt3' x='600' y='36' width='80' height='48' rx='10'/><text class='node-label' x='640' y='64' text-anchor='middle'>Undo</text>",
+ "diagram": {
+  "nodes": [
+   {
+    "id": "mail",
+    "kind": "external",
+    "title": "Email arrives",
+    "sub": "or found missing",
+    "card": "i-add-email"
+   },
+   {
+    "id": "match",
+    "kind": "job",
+    "title": "Match",
+    "sub": "sure or unsure",
+    "card": "s-match"
+   },
+   {
+    "id": "link",
+    "kind": "screen",
+    "title": "Link or ask",
+    "sub": "A, B or C",
+    "card": "fork-linking"
+   },
+   {
+    "id": "undo",
+    "kind": "screen",
+    "title": "Undo",
+    "sub": "puts it back",
+    "card": "s-link"
+   }
+  ],
+  "edges": [
+   [
+    "mail",
+    "match"
+   ],
+   [
+    "match",
+    "link"
+   ],
+   [
+    "link",
+    "undo"
+   ]
+  ]
+ },
  "intents": [
   {
    "id": "i-sure",

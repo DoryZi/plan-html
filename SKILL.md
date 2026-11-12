@@ -177,7 +177,7 @@ Draft the plan **directly as `plan.json`** (schema below). After a locked design
 boundary and step traces back to a picked screen.
 
 **Every plan MUST have a `goal`, `intents[]` with a `verify` per intent, a
-plan-level `diagramSvg`, and grill cards — no exceptions.** `boundaries[]` is
+plan-level `diagram`, and grill cards — no exceptions.** `boundaries[]` is
 optional: include it when the task has real scope risk (things that must not
 be touched, cost ceilings, "don't refactor X") and skip it for small
 contained tasks. The user can drop any boundary with its "Not needed" button.
@@ -236,22 +236,36 @@ contained tasks. The user can drop any boundary with its "Not needed" button.
   scope, what's out of scope, and what must not be touched. One boundary per
   card, written as a testable statement. When present, boundaries gate
   Finalize — the user must agree to each, rewrite it, or drop it.
-- **Diagrams are REQUIRED.** Every plan ships a plan-level `diagramSvg`
+- **Diagrams are REQUIRED.** Every plan ships a plan-level `diagram`
   (architecture/flow of what's being built). Additionally, any intent or
   decision that describes structure, flow, or sequence gets its own per-card
-  `diagramSvg` — if prose is explaining a shape, draw the shape instead.
+  `diagram` — if prose is explaining a shape, draw the shape instead.
 
-  **Diagram authoring rules (the deck styles these classes — use them):**
-  - `class="node"` boxes (bright blue). Color-code stages with the variants
-    `node alt1` (teal), `node alt2` (amber), `node alt3` (purple),
-    `node alt4` (rose) — e.g. inputs teal, processing blue, outputs amber.
-  - Titles use `class="node-label"` (white, bold); secondary lines use
-    `class="node-sub"` (light blue) — never invent your own fills/colors.
-  - Edges: `class="edge"` with `marker-end='url(#arrow)'`; label them with
-    `class="edge-label"` where the flow isn't obvious.
-  - **Size the viewBox to the content** — ~20px of padding around the
-    outermost shapes, no oceans of empty space. Nodes ~140×48 with ~60px
-    horizontal gaps read well.
+  **Write a diagram as data: boxes and arrows, never coordinates.** The deck
+  places the boxes, fits the text, colours them and draws the arrows.
+  - `nodes[]`: one box per module or stage of the flow, in the order the work
+    moves through them. `title` is 1 to 4 words; `sub` is one short line.
+  - `kind` picks the colour and the small label: `screen` (something the user
+    sees), `api` (an endpoint or service call), `data` (a file, table or
+    store), `job` (background work), `agent`, `user` (a person acting),
+    `external` (a system outside this build). Leave it out for a plain box.
+  - `card`: the id of the intent, boundary, decision or step that decides or
+    builds this box. A click on the box opens that card, so **link every box
+    that has one**: the diagram is the map of the plan, its boxes are the
+    plan's own steps and modules.
+  - `col` and `row` (from 1) place a box. Leave both out on every box and the
+    deck lays them out in order, five to a row. Set them when the flow has two
+    lanes (for example the screen side on row 1, the back end on row 2).
+  - `edges[]`: `["from", "to"]` or `["from", "to", "short label"]`. Label an
+    arrow only where the flow isn't obvious. Prefer arrows between neighbours
+    and between rows that touch; a long arrow across many boxes reads badly.
+  - Up to about 10 boxes. A bigger flow is two diagrams: the plan-level one
+    for the whole shape, a per-card one for the part that needs detail.
+
+  A hand-drawn `diagramSvg` (with `diagramViewBox`) still renders, for an old
+  plan or a shape the boxes cannot show (a timeline, a layout). Its classes:
+  `node` (`alt1` to `alt4`), `node-label`, `node-sub`, `edge` with
+  `marker-end='url(#arrow)'`, `edge-label`. When a plan has both, `diagram` wins.
 
 - **UI work gets mocks — always, no exceptions.** A decision about a flow (what the user clicks, what
   opens) is a Stage 3a question: options as strips of mock screen files. A decision about one screen's
@@ -707,8 +721,7 @@ of truth; the page is a live view of it (SSE), and you keep it current.
       //             {"key":"B", "label":"B. Paste and check", "caption":"…", "steps":[…]}],
       "dependsOn": ["intent-persist"],                       // optional; linked cards shown with the user's answers
       "thread": [],                                          // Q&A history, optional
-      "diagramSvg": "<rect class='node' …/>…",               // optional per-card diagram (intents too)
-      "diagramViewBox": "0 0 720 240"
+      "diagram": { "nodes": […], "edges": […] }              // optional per-card diagram (intents too), same shape as the plan's
     }
   ],
 
@@ -734,8 +747,14 @@ of truth; the page is a live view of it (SSE), and you keep it current.
     // prototype opt-in: "prototype": "proto/index.html", "start": "#/", and steps with "route": "#/jobs?scenario=x"
   },
 
-  "diagramSvg": "<rect class='node' …/>…",       // REQUIRED — plan-level architecture/flow diagram
-  "diagramViewBox": "0 0 720 240"                // optional
+  "diagram": {                                   // REQUIRED — plan-level architecture/flow diagram, drawn by the deck
+    "nodes": [
+      { "id": "form", "kind": "screen", "title": "Settings screen", "sub": "theme toggle", "card": "intent-toggle" },
+      { "id": "save", "kind": "api", "title": "PATCH /settings", "sub": "per user", "card": "s-save" },
+      { "id": "store", "kind": "data", "title": "users.theme", "card": "fork-storage" }
+    ],
+    "edges": [["form", "save"], ["save", "store", "on change"]]
+  }
 }
 ```
 
@@ -753,8 +772,7 @@ Notes:
   final plan.
 - `options` reads better than Approve/Reject when the decision is a concrete
   pick between named approaches.
-- The diagram is hand-authored inline SVG (same node/edge classes as before).
-  No mermaid, no CDN.
+- The diagram is data (`nodes` and `edges`); the deck draws it. No mermaid, no CDN.
 
 ## Rules
 

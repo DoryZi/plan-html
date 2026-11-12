@@ -80,9 +80,10 @@ through it, pin a note to a button, and pick the one you want.
 ![A design question in the deck: three options, each shown as a strip of mock screens with Try it and Pick buttons](docs/img/mock-screens.png)
 
 **The back end: see how it flows.** Every plan opens with a diagram of what
-happens behind the screens, from the first request to the last step.
+happens behind the screens, from the first request to the last step. Click a
+box and the card that decides it opens.
 
-![The shape of it: a flow diagram of the back end, from the screen through the API to the running agent](docs/img/flow.png)
+![The shape of it: a flow diagram with boxes coloured by kind (screen, API, data, job, agent) and arrows between them](docs/img/flow.png)
 
 Screens and flows in one plan, so you check the work end to end. You find out it
 is wrong in a minute, not after the build.
