@@ -10,6 +10,10 @@ All notable changes to **plan-html** are documented here.
   data, job, agent, user, external) and draws moving arrows. Hover a box to
   see what it connects to; click a box that names a card and that card opens.
   A hand-drawn `diagramSvg` still renders.
+- **Upload a transcript.** An **Upload transcript** button at the top of the
+  deck takes a text file of you talking about the work (.txt, .md, .srt,
+  .vtt). The server saves it under `transcripts/` next to the plan and tells
+  the agent, which rebuilds the plan from your words.
 - **A small example plan.** `examples/dark-mode` plans dark mode for a small
   code snippets app: one design question with two options as mock screens, two
   intents, a boundary and a decision. The README's pictures and its "try it

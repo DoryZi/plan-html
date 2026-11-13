@@ -390,6 +390,19 @@ of truth; the page is a live view of it (SSE), and you keep it current.
    - the full round object on **Send to agent** / **Finalize plan**.
    - `{"action":"timeout",...}` if the idle timeout hits.
 
+   - `{"action":"transcript","name","file","words"}` — the user pressed **Upload transcript** at the top of
+     the deck and gave you a transcript of themselves talking about this work (a recording, a saved
+     discussion; .txt, .md, .srt or .vtt). The server saved it under `transcripts/` next to the plan; `file`
+     is its path. Read the whole file and **rebuild the deck from it now**, the way a finished interview
+     rebuilds it (below): `goal`, `summary` and `intents[]` in their words, each with a real `verify`; what
+     the transcript leaves open becomes `needs-you` cards; what it settles is not asked. New ids for changed
+     cards; user-edited and user-added cards stay as the user set them. When the cycle has no `intent.md`,
+     write it first: the user's words copied exactly (drop only timestamps and cue numbers), never a
+     summary. Add `{"name", "file"}` to the plan's `transcripts[]`, bump `rev`, write `plan.json`; the open
+     deck updates in place. A second upload adds to the first. The same goes for a transcript the user hands
+     you in chat, also before any deck exists (Stage 1): read the file, build from it. A recording is
+     transcribed first (the project's transcription tool).
+
    **The interview (discovery only).** Above the intents sits a panel with
    one button: "Interview me & redesign". It opens a popup in which **you
    ask the user questions to understand what they are building and why**,
@@ -482,7 +495,7 @@ of truth; the page is a live view of it (SSE), and you keep it current.
    ```
    Monitor(persistent: true, command:
      tail -n0 -f <server-output-file> |
-       grep -E --line-buffered '"action": ?"(ask|pick|finalize|send-round|lock-design|timeout)"')
+       grep -E --line-buffered '"action": ?"(ask|pick|transcript|finalize|send-round|lock-design|timeout)"')
    ```
 
    With the Monitor armed, asks, clarifications and finalize are all delivered

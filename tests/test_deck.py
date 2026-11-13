@@ -631,3 +631,19 @@ def test_awkward_diagrams_stay_inside_the_frame(desktop: Page) -> None:
         return [out, side.right > mid.right, longest];
     }""")
     assert out == 0 and around and longest <= 30
+
+
+def test_an_uploaded_transcript_is_saved_and_reaches_the_agent(mocks: tuple[Page, Path]) -> None:
+    """Upload transcript at the top of the deck saves the file next to the plan and tells the agent where it is."""
+    page, out = mocks
+    assert page.locator("#topRow").get_by_role("button", name="Upload transcript").is_visible()
+    words = "I want the experiment to run five times.\nThen compare the runs."
+    page.locator("#trFile").set_input_files({"name": "my intent.txt", "mimeType": "text/plain", "buffer": words.encode()})
+    page.wait_for_timeout(500)
+    assert "my intent.txt uploaded (12 words)" in page.locator("#trState").inner_text()
+    events = [json.loads(ln) for ln in out.read_text().splitlines() if ln.startswith("{")]
+    event = next(e for e in events if e["action"] == "transcript")
+    assert event["name"] == "my intent.txt" and event["words"] == 12
+    saved = Path(event["file"])
+    assert saved.parent == out.parent / "transcripts" and saved.name.endswith("-my-intent.txt")
+    assert saved.read_text(encoding="utf-8") == words

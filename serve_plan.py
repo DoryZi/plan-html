@@ -433,6 +433,27 @@ def build_handler(html_path: Path, plan_path: Path, answers_path: Path,
                 # emit on stdout so a watching agent Monitor wakes immediately (push)
                 print(json.dumps({"action": "ask", **q}, ensure_ascii=False), flush=True)
                 self._respond_json(200)
+            elif self.path == "/transcript":
+                # a transcript uploaded in the deck: keep the file next to the plan and tell stdout where it is,
+                # so a watching agent rebuilds the plan from the user's own words. Body: {name, text}.
+                data = self._read_json()
+                text = data.get("text") if isinstance(data, dict) else None
+                if not isinstance(text, str) or not text.strip():
+                    self._respond_json(400, b'{"ok":false}')
+                    return
+                name = re.sub(r"[^A-Za-z0-9._-]+", "-", Path(str(data.get("name") or "")).name).strip("-.")
+                folder = plan_path.parent / "transcripts"
+                target = folder / f"{time.strftime('%Y-%m-%d-%H%M%S')}-{name or 'transcript.txt'}"
+                try:
+                    folder.mkdir(exist_ok=True)
+                    target.write_text(text, encoding="utf-8")
+                except OSError as exc:
+                    log.error("could not save the transcript (%s): %s", target, exc)
+                    self._respond_json(500, b'{"ok":false}')
+                    return
+                print(json.dumps({"action": "transcript", "name": data.get("name") or target.name,
+                                  "file": str(target), "words": len(text.split())}, ensure_ascii=False), flush=True)
+                self._respond_json(200)
             elif self.path == "/pick":
                 # a pick on a card, the moment it is made: a watching agent can write the plan for it while the
                 # user goes on (planning while you plan). Body: {cardId, choice|null}.

@@ -1093,6 +1093,9 @@
 
   <div class="toprow" id="topRow"><button class="theme-btn" id="themeBtn" type="button" title="Switch between the day and night theme" aria-label="Switch theme">☀️</button></div>
 
+  <input type="file" id="trFile" accept=".txt,.md,.srt,.vtt,text/plain" hidden>
+  <div class="iv-status" id="trState" hidden></div>
+
   <div id="diagramWrap" style="display:none">
     <h2>🗺️ The shape of it — architecture &amp; flow</h2>
     <div class="sechint">The whole plan at a glance. Scroll down for the detail — intents, decisions, and steps build on this.</div>
@@ -1368,6 +1371,29 @@
       target.classList.add("top-fold");
       topRow.appendChild(b);
       return { id, target, b };
+    });
+    // a transcript of the user talking (a recording, a saved discussion): the agent rebuilds the plan from it
+    const trFile = document.getElementById("trFile"), trState = document.getElementById("trState");
+    const trBtn = el2("button", null, "Upload transcript");
+    trBtn.type = "button";
+    trBtn.title = "Give the agent a transcript of you talking about this (.txt, .md, .srt, .vtt); it rebuilds the plan from your words";
+    trBtn.addEventListener("click", () => trFile.click());
+    topRow.appendChild(trBtn);
+    const trSay = (cls, text) => { trState.hidden = false; trState.className = "iv-status " + cls; trState.textContent = text; };
+    trFile.addEventListener("change", async () => {
+      const file = trFile.files[0];
+      trFile.value = "";
+      if (!file) return;
+      try {
+        const text = await file.text();
+        if (!text.trim()) { trSay("err", `${file.name} is empty.`); return; }
+        const res = await fetch("/transcript", { method: "POST", headers: { "Content-Type": "application/json" },
+                                                 body: JSON.stringify({ name: file.name, text }) });
+        if (!res.ok) throw new Error(res.status);
+        trSay("landed", `✓ ${file.name} uploaded (${text.trim().split(/\s+/).length} words). The agent rebuilds the plan from it; the cards update here.`);
+      } catch {
+        trSay("err", `Couldn't upload ${file.name}. Give the agent the file's path in the terminal instead.`);
+      }
     });
     let ivShown = false;
     const syncTop = () => {
